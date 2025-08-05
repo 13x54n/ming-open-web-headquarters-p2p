@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Menu, Wallet, User, Bell, LogOut, Settings, ChevronDown, X } from "lucide-react"
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet"
@@ -25,14 +26,23 @@ export default function P2PNavbar() {
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const { currentUser, logout } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true)
       await logout()
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out from all devices.",
+      })
       router.push('/')
     } catch (error) {
-      console.error('Logout error:', error)
+      toast({
+        variant: "destructive",
+        title: "Logout Error",
+        description: "There was an issue logging out. Please try again.",
+      })
     } finally {
       setIsLoggingOut(false)
     }
@@ -65,7 +75,7 @@ export default function P2PNavbar() {
             {/* Balance */}
             <Link href="/wallet" className="flex items-center space-x-2 bg-muted/20 hover:bg-muted/30 px-4 py-2 rounded-lg transition-colors cursor-pointer border border-border">
               <Wallet className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-white">$6.08</span>
+                                  <span className="text-sm font-medium text-white">6.08</span>
               <div className="flex items-center gap-1 text-green-500 text-xs">
                 <span>+1.69%</span>
               </div>
@@ -96,7 +106,7 @@ export default function P2PNavbar() {
                       <span className="text-sm font-medium text-white">Trade Completed</span>
                       <span className="text-xs text-muted-foreground ml-auto">2m ago</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Your USDT purchase of ₹1,500 has been completed successfully.</p>
+                                          <p className="text-xs text-muted-foreground">Your USDT purchase of 1,500 has been completed successfully.</p>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted/20">
                     <div className="flex items-center gap-2 w-full">
@@ -104,7 +114,7 @@ export default function P2PNavbar() {
                       <span className="text-sm font-medium text-white">New Offer Available</span>
                       <span className="text-xs text-muted-foreground ml-auto">15m ago</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">A new ETH seller is available at ₹92.39 per ETH.</p>
+                                          <p className="text-xs text-muted-foreground">A new ETH seller is available at 92.39 per ETH.</p>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer hover:bg-muted/20">
                     <div className="flex items-center gap-2 w-full">

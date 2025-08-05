@@ -10,7 +10,7 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { sendUserToBackend } from '@/lib/utils';
+import { sendUserToBackend, logoutFromBackend } from '@/lib/utils';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -49,20 +49,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const result = await signInWithPopup(auth, provider);
       
-      // Send user data to backend after successful sign-in
-      if (result.user) {
-        await sendUserToBackend(result.user.uid, result.user.email);
-      }
+      // User data will be sent to backend in onAuthStateChanged callback
+      // This prevents duplicate calls
       
-      console.log('User signed in with Google');
     } catch (error) {
-      console.error('Google sign-in error:', error);
       throw error;
     }
   }
 
   async function logout() {
-    await signOut(auth);
+    try {
+      // Call backend logout endpoint if user is logged in
+      if (currentUser?.uid) {
+        await logoutFromBackend(currentUser.uid);
+      }
+      
+      // Sign out from Firebase
+      await signOut(auth);
+    } catch (error) {
+
+      // Still sign out from Firebase even if backend fails
+      await signOut(auth);
+    }
   }
 
   async function updateUserProfile(displayName: string) {
@@ -79,7 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(`welcome-seen-${currentUser.uid}`);
         setIsNewUser(true);
       } catch (error) {
-        console.warn('Failed to reset welcome state:', error);
         setIsNewUser(true);
       }
     }
@@ -90,9 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.setItem(`welcome-seen-${currentUser.uid}`, 'true');
         setIsNewUser(false);
-        console.log('Welcome marked as seen for user:', currentUser.uid);
       } catch (error) {
-        console.warn('Failed to mark welcome as seen:', error);
         setIsNewUser(false);
       }
     }
@@ -104,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         // Send user data to backend for existing users (sync on page load/refresh)
-        await sendUserToBackend(user.uid, user.email);
+        await sendUserToBackend(user.uid, user.email, user.displayName, user.photoURL);
         
         // Check if this user has seen the welcome before using localStorage
         try {
@@ -113,14 +118,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!hasSeenWelcome) {
             // This is a new user or returning user who hasn't seen welcome
             setIsNewUser(true);
-            console.log('New user or first-time visitor detected');
           } else {
             setIsNewUser(false);
-            console.log('Returning user detected');
           }
         } catch (error) {
           // If localStorage fails (e.g., private browsing), treat as new user
-          console.warn('localStorage access failed, treating as new user:', error);
           setIsNewUser(true);
         }
       } else {

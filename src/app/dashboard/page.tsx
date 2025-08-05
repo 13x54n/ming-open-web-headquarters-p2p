@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,36 +13,257 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { ChevronDown, Plus, RefreshCw } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { PAYMENT_METHODS, CURRENCIES, CRYPTOCURRENCIES } from '@/lib/constants';
+import { createOrder, fetchOrders, fetchUserData } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
+  const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
   const [selectedCrypto, setSelectedCrypto] = useState('USDT');
   const [transactionAmount, setTransactionAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('All payment methods');
   const [sortBy, setSortBy] = useState('Sort By Price');
   const [selectedCurrency, setSelectedCurrency] = useState('NPR');
+  
+  // Create Order Modal State
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
+  const [orderCrypto, setOrderCrypto] = useState('USDT');
+  const [orderAmount, setOrderAmount] = useState('');
+  const [orderPrice, setOrderPrice] = useState('');
+  const [orderPaymentMethods, setOrderPaymentMethods] = useState<string[]>([]);
+  const [orderAdditionalInfo, setOrderAdditionalInfo] = useState('');
 
-  const cryptocurrencies = ['USDT', 'ETH', 'STRK', 'SOL'];
+  // Orders data state
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [userDataMap, setUserDataMap] = useState<Record<string, any>>({});
 
-  const currencies = [
-    { code: 'NPR', name: 'Nepalese Rupee', flag: '🇳🇵' },
-    // { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
-    // { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
-    // { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
-    // { code: 'INR', name: 'Indian Rupee', flag: '🇮🇳' },
-    // { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' },
-  ];
+  // Calculate average price from current orders
+  const averagePrice = orders.length > 0 
+    ? orders.reduce((sum, order) => sum + (order.price || 0), 0) / orders.length 
+    : 0;
 
-  const allPaymentMethods = [
-    { name: 'Bank Transfer', color: 'bg-yellow-500' },
-    { name: 'Esewa', color: 'bg-green-500' },
-    { name: 'Khalti', color: 'bg-green-500' },
-  ];
+  // Filter orders based on selected payment method, amount, and starting number
+  const filteredOrders = orders.filter(order => {
+    // Filter by payment method
+    const paymentMethodMatch = paymentMethod === 'All payment methods' || 
+      order.paymentMethods?.includes(paymentMethod);
+    
+    // Filter by amount if transaction amount is entered
+    let amountMatch = true;
+    if (transactionAmount && !isNaN(parseFloat(transactionAmount))) {
+      const userAmount = parseFloat(transactionAmount);
+      const orderPrice = order.price || 0;
+      
+      // Check if user's amount is within reasonable range of order's price per token
+      // Allow ±20% tolerance for price matching
+      const tolerance = 0.2; // 20%
+      const minPrice = orderPrice * (1 - tolerance);
+      const maxPrice = orderPrice * (1 + tolerance);
+      
+      amountMatch = userAmount >= minPrice && userAmount <= maxPrice;
+    }
+
+    return paymentMethodMatch && amountMatch;
+  });
 
   const handleTabSwitch = (checked: boolean) => {
     setActiveTab(checked ? 'sell' : 'buy');
+  };
+
+  const handleCreateOrder = () => {
+    setShowCreateOrder(true);
+    setOrderType(activeTab);
+    setOrderCrypto(selectedCrypto);
+  };
+
+  const handleSubmitOrder = async () => {
+    try {
+      // Check if user is authenticated
+      if (!currentUser?.uid) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "You must be logged in to create an order.",
+        });
+        return;
+      }
+
+      // Validate required fields
+      if (!orderAmount || !orderPrice || orderPaymentMethods.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Please fill in all required fields and select at least one payment method.",
+        });
+        return;
+      }
+
+      // Validate and format data before sending
+      const orderData = {
+        uid: currentUser?.uid,
+        type: orderType,
+        cryptocurrency: orderCrypto,
+        amount: parseFloat(orderAmount), // Send as number, not string
+        price: parseFloat(orderPrice), // Send as number, not string
+        paymentMethods: orderPaymentMethods,
+        additionalInfo: orderAdditionalInfo || '',
+      };
+
+      // Additional validation to match backend expectations
+      if (isNaN(orderData.amount) || orderData.amount <= 0) {
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Amount must be a positive number.",
+        });
+        return;
+      }
+
+      if (isNaN(orderData.price) || orderData.price <= 0) {
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Price must be a positive number.",
+        });
+        return;
+      }
+
+      
+
+      // Create order via API
+      const result = await createOrder(orderData);
+
+      // Show success message
+      toast({
+        variant: "success",
+        title: "Order Created",
+        description: `Order created successfully! Order ID: ${result.data?.order._id}`,
+      });
+      
+      // Reset form and close modal
+      setOrderAmount('');
+      setOrderPrice('');
+      setOrderPaymentMethods([]);
+      setOrderAdditionalInfo('');
+      setShowCreateOrder(false);
+      handleOrderCreated(); // Refresh orders after creation
+    } catch (error) {
+
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to create order: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    }
+  };
+
+  const togglePaymentMethod = (method: string) => {
+    setOrderPaymentMethods(prev => 
+      prev.includes(method) 
+        ? prev.filter(m => m !== method)
+        : [...prev, method]
+    );
+  };
+
+  // Fetch orders from backend
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setOrdersError(null);
+      
+      // Determine sort parameter based on sortBy state
+      let sortParam = '';
+      if (sortBy === 'Sort By Price') sortParam = 'price';
+      else if (sortBy === 'Sort By Time') sortParam = 'createdAt';
+      else if (sortBy === 'Sort By Volume') sortParam = 'amount';
+      
+      const result = await fetchOrders({
+        page: currentPage,
+        limit: 10,
+        type: activeTab,
+        cryptocurrency: selectedCrypto,
+        status: 'active',
+        sort: sortParam
+      });
+
+      if (result.success) {
+        const ordersData = result.data.orders || [];
+        setOrders(ordersData);
+        setTotalPages(result.data.pagination?.pages || 1);
+        setTotalOrders(result.data.pagination?.total || 0);
+
+        // Fetch user data for each order
+        const userDataPromises = ordersData.map(async (order) => {
+          if (order.uid && !userDataMap[order.uid]) {
+            try {
+              const userData = await fetchUserData(order.uid);
+              return { uid: order.uid, userData };
+            } catch (error) {
+              return { uid: order.uid, userData: null };
+            }
+          }
+          return null;
+        });
+
+        const userDataResults = await Promise.all(userDataPromises);
+        const newUserDataMap = { ...userDataMap };
+        
+        userDataResults.forEach((result) => {
+          if (result && result.userData) {
+            newUserDataMap[result.uid] = result.userData;
+          }
+        });
+
+        setUserDataMap(newUserDataMap);
+      } else {
+        setOrdersError('Failed to load orders');
+      }
+    } catch (error) {
+      setOrdersError(error instanceof Error ? error.message : 'Failed to load orders');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load orders from server.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load orders when component mounts or filters change
+  useEffect(() => {
+    loadOrders();
+  }, [activeTab, selectedCrypto, currentPage, sortBy]);
+
+  // Refresh orders after creating a new order
+  const handleOrderCreated = () => {
+    loadOrders();
+  };
+
+  const clearAllFilters = () => {
+    setTransactionAmount('');
+    setPaymentMethod('All payment methods');
   };
 
   return (
@@ -71,17 +292,17 @@ export default function DashboardPage() {
 
               {/* Cryptocurrency Tickers */}
               <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2">
-                {cryptocurrencies.map((crypto) => (
+                {CRYPTOCURRENCIES.map((crypto) => (
                   <Badge
-                    key={crypto}
-                    variant={selectedCrypto === crypto ? 'default' : 'outline'}
-                    className={`cursor-pointer whitespace-nowrap ${selectedCrypto === crypto
+                    key={crypto.symbol}
+                    variant={selectedCrypto === crypto.symbol ? 'default' : 'outline'}
+                    className={`cursor-pointer whitespace-nowrap ${selectedCrypto === crypto.symbol
                       ? 'bg-white text-gray-900 hover:bg-gray-200'
                       : 'bg-transparent border-border text-muted-foreground hover:bg-accent'
                       }`}
-                    onClick={() => setSelectedCrypto(crypto)}
+                    onClick={() => setSelectedCrypto(crypto.symbol)}
                   >
-                    {crypto}
+                    {crypto.symbol}
                   </Badge>
                 ))}
               </div>
@@ -97,11 +318,23 @@ export default function DashboardPage() {
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="Enter amount"
+                    placeholder={averagePrice > 0 ? `Avg: ${averagePrice.toFixed(2)} per token` : "Enter price per token"}
                     value={transactionAmount}
                     onChange={(e) => setTransactionAmount(e.target.value)}
-                    className="bg-background border-border text-foreground placeholder-muted-foreground pr-20"
+                    className={`bg-background border-border text-foreground placeholder-muted-foreground pr-20 ${
+                      transactionAmount && !isNaN(parseFloat(transactionAmount)) ? 'border-green-500' : ''
+                    }`}
                   />
+                  {transactionAmount && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setTransactionAmount('')}
+                      className="absolute right-16 top-1/2 transform -translate-y-1/2 h-8 px-2 hover:bg-accent text-muted-foreground"
+                    >
+                      ✕
+                    </Button>
+                  )}
                   {/* Currency Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -112,7 +345,7 @@ export default function DashboardPage() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center bg-background">
-                            <span className="text-sm">{currencies.find(c => c.code === selectedCurrency)?.flag}</span>
+                            <span className="text-sm">{CURRENCIES.find(c => c.code === selectedCurrency)?.flag}</span>
                           </div>
                           <span className="text-sm text-muted-foreground">{selectedCurrency}</span>
                           <ChevronDown className="w-3 h-3 text-muted-foreground" />
@@ -120,7 +353,7 @@ export default function DashboardPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      {currencies.map((currency) => (
+                      {CURRENCIES.map((currency) => (
                         <DropdownMenuItem
                           key={currency.code}
                           className="flex items-center gap-3 cursor-pointer"
@@ -156,9 +389,15 @@ export default function DashboardPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    {allPaymentMethods.map((method) => (
+                    <DropdownMenuItem
+                      className="text-foreground hover:bg-accent"
+                      onClick={() => setPaymentMethod('All payment methods')}
+                    >
+                      All payment methods
+                    </DropdownMenuItem>
+                    {PAYMENT_METHODS.map((method) => (
                       <DropdownMenuItem
-                        key={method.name}
+                        key={method.id}
                         className="text-foreground hover:bg-accent"
                         onClick={() => setPaymentMethod(method.name)}
                       >
@@ -204,13 +443,29 @@ export default function DashboardPage() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={loadOrders}
+                  disabled={loading}
+                  className="bg-background border-border text-foreground hover:bg-accent"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
             </div>
+
+
+
 
             {/* Trading Pairs List */}
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground mb-4">
-                Showing {activeTab === 'buy' ? 'buy' : 'sell'} offers for {selectedCrypto}
+                Showing {filteredOrders.length} {activeTab === 'buy' ? 'buy' : 'sell'} offers for {selectedCrypto}
+                {paymentMethod !== 'All payment methods' && ` with ${paymentMethod}`}
+                {transactionAmount && !isNaN(parseFloat(transactionAmount)) && ` around ${parseFloat(transactionAmount).toFixed(2)} per token`}
+
+                {averagePrice > 0 && ` • Avg Price: ${averagePrice.toFixed(2)}`}
               </div>
 
               {/* Column Headers */}
@@ -222,33 +477,70 @@ export default function DashboardPage() {
                 <div>Trade</div>
               </div>
 
-              {/* Sample Trading Pairs */}
-              {[1, 2, 3, 4, 5].map((item) => (
-                <div key={item} className="hidden sm:grid grid-cols-5 gap-4 px-4 pb-4 border-b">
+              {/* Loading State */}
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">Loading orders...</div>
+                </div>
+              )}
+
+              {/* Error State */}
+              {ordersError && !loading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-red-500">{ordersError}</div>
+                </div>
+              )}
+
+              {/* Real Trading Pairs from Backend */}
+              {!loading && !ordersError && filteredOrders.length === 0 && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">
+                    {orders.length === 0 
+                      ? `No ${activeTab} orders found for ${selectedCrypto}`
+                      : `No ${activeTab} orders found for ${selectedCrypto}${paymentMethod !== 'All payment methods' ? ` with ${paymentMethod}` : ''}${transactionAmount && !isNaN(parseFloat(transactionAmount)) ? ` around ${parseFloat(transactionAmount).toFixed(2)} per token` : ''}`
+                    }
+                  </div>
+                </div>
+              )}
+
+              {!loading && !ordersError && filteredOrders.map((order) => (
+                <div key={order._id} className="hidden sm:grid grid-cols-5 gap-4 px-4 pb-4 border-b">
                   {/* Advertisers Column */}
                   <div className="flex items-start gap-3">
                     <div className="relative">
                       <Avatar className="w-7 h-7">
                         <AvatarImage
-                          src={`https://i.pravatar.cc/150?img=${item}`}
-                          alt={`Trader ${item}`}
+                          src={userDataMap[order.uid]?.photoURL || `https://i.pravatar.cc/150?img=${order.uid?.slice(-2) || '1'}`}
+                          alt={userDataMap[order.uid]?.displayName || `User ${order.uid?.slice(-4) || 'user'}`}
                         />
                         <AvatarFallback className="bg-muted text-foreground">
-                          {item}
+                          {userDataMap[order.uid]?.displayName?.slice(0, 2)?.toUpperCase() || order.uid?.slice(-4) || 'user'}
                         </AvatarFallback>
+                        {!userDataMap[order.uid] && (
+                          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-full">
+                            <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
                       </Avatar>
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
+                                                <div 
+                            className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
+                              userDataMap[order.uid]?.isActive ? 'bg-green-500' : 'bg-gray-400'
+                            }`}
+                            title={userDataMap[order.uid]?.isActive ? 'User is active' : 'User is inactive'}
+                          ></div>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-foreground">trader{item}</span>
+                        <span className="font-medium text-foreground">
+                          {userDataMap[order.uid]?.displayName || `User ${order.uid?.slice(-4) || 'user'}`}
+                        </span>
 
                       </div>
                       <div className="text-xs text-muted-foreground mb-1">
-                        {Math.floor(Math.random() * 1000) + 100} orders • {Math.floor(Math.random() * 5) + 95}% completion
+                        {order.status} • {new Date(order.createdAt).toLocaleDateString()}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        👍 {Math.floor(Math.random() * 10) + 90}% • ⏱️ {Math.floor(Math.random() * 60) + 5} min
+                        ⏱️ {new Date(order.createdAt).toLocaleTimeString()}
                       </div>
                     </div>
                   </div>
@@ -256,35 +548,28 @@ export default function DashboardPage() {
                   {/* Price Column */}
                   <div className="flex items-center">
                     <div className="font-medium text-foreground">
-                       {Math.floor(Math.random() * 1000) + 100}.{Math.floor(Math.random() * 100)}
+                      {order.price?.toFixed(2) || '0.00'}
                     </div>
                   </div>
 
                   {/* Available/Order Limit Column */}
                   <div className="flex flex-col justify-center">
                     <div className="font-medium text-foreground">
-                      {Math.floor(Math.random() * 1000) + 100}.{Math.floor(Math.random() * 100)} {selectedCrypto}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {Math.floor(Math.random() * 50000) + 10000} - {Math.floor(Math.random() * 100000) + 50000} NPR
+                      {order.amount?.toFixed(2) || '0.00'} {order.cryptocurrency || selectedCrypto}
                     </div>
                   </div>
 
                   {/* Payment Column */}
                   <div className="flex flex-col gap-1">
-                    {(() => {
-                      // Randomly select 1-3 payment methods for each trader
-                      const numMethods = Math.floor(Math.random() * 3) + 1;
-                      const shuffled = allPaymentMethods.sort(() => 0.5 - Math.random());
-                      const selectedMethods = shuffled.slice(0, numMethods);
-
-                      return selectedMethods.map((method, index) => (
+                    {order.paymentMethods?.map((method: string, index: number) => {
+                      const paymentMethod = PAYMENT_METHODS.find(pm => pm.name === method);
+                      return (
                         <div key={index} className="flex items-center gap-2">
-                          <div className={`w-1 h-3 ${method.color} rounded-sm`}></div>
-                          <span className="text-sm text-foreground">{method.name}</span>
+                          <div className={`w-1 h-3 ${paymentMethod?.color || 'bg-gray-500'} rounded-sm`}></div>
+                          <span className="text-sm text-foreground">{method}</span>
                         </div>
-                      ));
-                    })()}
+                      );
+                    })}
                   </div>
 
                   {/* Trade Column */}
@@ -304,31 +589,43 @@ export default function DashboardPage() {
 
               {/* Mobile Trading Pairs */}
               <div className="sm:hidden space-y-4">
-                {[1, 2, 3, 4, 5].map((item) => (
-                  <div key={`mobile-${item}`} className="border border-border rounded-lg p-4 space-y-3">
+                {!loading && !ordersError && filteredOrders.map((order) => (
+                  <div key={`mobile-${order._id}`} className="border border-border rounded-lg p-4 space-y-3">
                     {/* Trader Info */}
                     <div className="flex items-start gap-3">
                       <div className="relative">
                         <Avatar className="w-10 h-10">
                           <AvatarImage
-                            src={`https://i.pravatar.cc/150?img=${item}`}
-                            alt={`Trader ${item}`}
+                            src={userDataMap[order.uid]?.photoURL || `https://i.pravatar.cc/150?img=${order.uid?.slice(-2) || '1'}`}
+                            alt={userDataMap[order.uid]?.displayName || `User ${order.uid?.slice(-4) || 'user'}`}
                           />
                           <AvatarFallback className="bg-muted text-foreground">
-                            {item}
+                            {userDataMap[order.uid]?.displayName?.slice(0, 2)?.toUpperCase() || order.uid?.slice(-4) || 'user'}
                           </AvatarFallback>
+                          {!userDataMap[order.uid] && (
+                            <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-full">
+                              <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
                         </Avatar>
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
+                        <div 
+                          className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
+                            userDataMap[order.uid]?.isActive ? 'bg-green-500' : 'bg-gray-400'
+                          }`}
+                          title={userDataMap[order.uid]?.isActive ? 'User is active' : 'User is inactive'}
+                        ></div>
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-foreground">trader{item}</span>
+                          <span className="font-medium text-foreground">
+                            {userDataMap[order.uid]?.displayName || `User ${order.uid?.slice(-4) || 'user'}`}
+                          </span>
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">
-                          {Math.floor(Math.random() * 1000) + 100} orders • {Math.floor(Math.random() * 5) + 95}% completion
+                          {order.status} • {new Date(order.createdAt).toLocaleDateString()}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          👍 {Math.floor(Math.random() * 10) + 90}% • ⏱️ {Math.floor(Math.random() * 60) + 5} min
+                          ⏱️ {new Date(order.createdAt).toLocaleTimeString()}
                         </div>
                       </div>
                     </div>
@@ -336,39 +633,30 @@ export default function DashboardPage() {
                     {/* Price and Available */}
                     <div className="flex justify-between items-center">
                       <div className="text-lg font-bold text-foreground">
-                        ₹ {Math.floor(Math.random() * 1000) + 100}.{Math.floor(Math.random() * 100)}
+                        {order.price?.toFixed(2) || '0.00'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {Math.floor(Math.random() * 1000) + 100}.{Math.floor(Math.random() * 100)} {selectedCrypto}
+                        {order.amount?.toFixed(4) || '0.0000'} {order.cryptocurrency || selectedCrypto}
                       </div>
                     </div>
 
-                    {/* Order Limits */}
+                    {/* Order Info */}
                     <div className="text-sm text-muted-foreground">
-                      {Math.floor(Math.random() * 50000) + 10000} - {Math.floor(Math.random() * 100000) + 50000} NPR
+                      Total Value: {order.totalValue?.toFixed(2) || '0.00'}
                     </div>
 
                     {/* Payment Methods and Action */}
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex flex-col gap-1">
-                        {(() => {
-                          const allPaymentMethods = [
-                            { name: 'Bank Transfer', color: 'bg-yellow-500' },
-                            { name: 'Esewa', color: 'bg-green-500' },
-                            { name: 'Airtime Mobile Top-Up', color: 'bg-green-500' },
-                          ];
-
-                          const numMethods = Math.floor(Math.random() * 3) + 1;
-                          const shuffled = allPaymentMethods.sort(() => 0.5 - Math.random());
-                          const selectedMethods = shuffled.slice(0, numMethods);
-
-                          return selectedMethods.map((method, index) => (
+                        {order.paymentMethods?.map((method: string, index: number) => {
+                          const paymentMethod = PAYMENT_METHODS.find(pm => pm.name === method);
+                          return (
                             <div key={index} className="flex items-center gap-2">
-                              <div className={`w-1 h-3 ${method.color} rounded-sm`}></div>
-                              <span className="text-sm text-foreground">{method.name}</span>
+                              <div className={`w-1 h-3 ${paymentMethod?.color || 'bg-gray-500'} rounded-sm`}></div>
+                              <span className="text-sm text-foreground">{method}</span>
                             </div>
-                          ));
-                        })()}
+                          );
+                        })}
                       </div>
 
                       <Button
@@ -378,14 +666,194 @@ export default function DashboardPage() {
                           : 'bg-red-600 hover:bg-red-700 text-white'
                           }`}
                       >
-                        {activeTab === 'buy' ? `Buy ${selectedCrypto}` : `Sell ${selectedCrypto}`}
+                        {activeTab === 'buy' ? `Buy ${order.cryptocurrency || selectedCrypto}` : `Sell ${order.cryptocurrency || selectedCrypto}`}
                       </Button>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Pagination */}
+              {!loading && !ordersError && totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalOrders)} of {totalOrders} orders
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="bg-background border-border text-foreground hover:bg-accent"
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={currentPage === pageNum 
+                              ? "bg-primary text-primary-foreground" 
+                              : "bg-background border-border text-foreground hover:bg-accent"
+                            }
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="bg-background border-border text-foreground hover:bg-accent"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
+
+          {/* Floating Create Order Button */}
+          <Button
+            onClick={handleCreateOrder}
+            className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg bg-green-500 cursor-pointer hover:bg-green-600 text-white z-50"
+            size="icon"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+
+          {/* Create Order Modal */}
+          <Dialog open={showCreateOrder} onOpenChange={setShowCreateOrder}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Create {orderType === 'buy' ? 'Buy' : 'Sell'} Order</DialogTitle>
+                <DialogDescription>
+                  Create a new {orderType} order for {orderCrypto}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                {/* Order Type Toggle */}
+                <div className="flex items-center gap-4">
+                  <Label>Order Type</Label>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${orderType === 'buy' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      Buy
+                    </span>
+                    <Switch
+                      checked={orderType === 'sell'}
+                      onCheckedChange={(checked) => setOrderType(checked ? 'sell' : 'buy')}
+                    />
+                    <span className={`text-sm font-medium ${orderType === 'sell' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      Sell
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cryptocurrency Selection */}
+                <div className="grid gap-2">
+                  <Label htmlFor="crypto">Cryptocurrency</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="justify-between">
+                        {orderCrypto}
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {CRYPTOCURRENCIES.map((crypto) => (
+                        <DropdownMenuItem
+                          key={crypto.symbol}
+                          onClick={() => setOrderCrypto(crypto.symbol)}
+                        >
+                          {crypto.symbol}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Amount and Price */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="amount">Amount ({orderCrypto})</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="0.00"
+                      value={orderAmount}
+                      onChange={(e) => setOrderAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="price">Price (NPR)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      placeholder="0.00"
+                      value={orderPrice}
+                      onChange={(e) => setOrderPrice(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Payment Methods */}
+                <div className="grid gap-2">
+                  <Label>Payment Methods</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {PAYMENT_METHODS.map((method) => (
+                      <Button
+                        key={method.id}
+                        variant={orderPaymentMethods.includes(method.name) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => togglePaymentMethod(method.name)}
+                        className="flex items-center gap-2"
+                      >
+                        <div className={`w-2 h-2 ${method.color} rounded-full`}></div>
+                        {method.name}
+                      </Button>
+                    ))}
+                  </div>
+                  {orderPaymentMethods.length > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      Selected: {orderPaymentMethods.join(', ')}
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="grid gap-2">
+                  <Label htmlFor="additionalInfo">Additional Information (Optional)</Label>
+                  <Textarea
+                    id="additionalInfo"
+                    placeholder="Add any additional information about your order..."
+                    value={orderAdditionalInfo}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setOrderAdditionalInfo(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowCreateOrder(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmitOrder}>
+                  Create Order
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </ProtectedRoute>

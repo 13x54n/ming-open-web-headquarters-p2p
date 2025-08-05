@@ -100,11 +100,11 @@ export default function WalletPage() {
             <div className="space-y-2">
               <h1 className="text-lg sm:text-xl font-semibold text-white">Estimated Balance</h1>
               <div className="flex items-center gap-2">
-                <span className="text-3xl sm:text-4xl font-bold text-white">${totalValue.toFixed(2)}</span>
+                <span className="text-3xl sm:text-4xl font-bold text-white">{totalValue.toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-1 text-green-500 text-sm">
                 <TrendingUp className="h-4 w-4" />
-                <span>+${dailyChange.toFixed(2)} (+{dailyChangePercent.toFixed(2)}%)</span>
+                                  <span>+{dailyChange.toFixed(2)} (+{dailyChangePercent.toFixed(2)}%)</span>
               </div>
             </div>
 
@@ -114,7 +114,7 @@ export default function WalletPage() {
                 className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                 onClick={() => {
                   // TODO: Implement deposit functionality
-                  console.log('Deposit clicked');
+              
                 }}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -127,7 +127,7 @@ export default function WalletPage() {
                 className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                 onClick={() => {
                   // TODO: Implement withdraw functionality
-                  console.log('Withdraw clicked');
+              
                 }}
               >
                 <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -140,7 +140,7 @@ export default function WalletPage() {
                 className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                 onClick={() => {
                   // TODO: Implement transfer functionality
-                  console.log('Transfer clicked');
+              
                 }}
               >
                 <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -207,7 +207,7 @@ export default function WalletPage() {
                       {/* Price Column */}
                       <div className="flex items-center">
                         <div>
-                          <div className="text-sm">${token.price.toLocaleString()}</div>
+                          <div className="text-sm">{token.price.toLocaleString()}</div>
                           <div className={`flex items-center gap-1 text-xs ${token.isPositive ? 'text-green-500' : 'text-red-500'
                             }`}>
                             {token.isPositive ? (
@@ -223,7 +223,7 @@ export default function WalletPage() {
                       {/* Balance Column */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-sm">${token.value.toFixed(2)}</div>
+                          <div className="text-sm">{token.value.toFixed(2)}</div>
                           <div className="text-xs text-muted-foreground">
                             {token.balance.toLocaleString()} {token.symbol}
                           </div>
@@ -251,7 +251,7 @@ export default function WalletPage() {
 
                     {/* Balance */}
                     <div className="text-right">
-                      <div className="text-sm font-medium">${token.value.toFixed(2)}</div>
+                      <div className="text-sm font-medium">{token.value.toFixed(2)}</div>
                       <div className="text-xs text-muted-foreground">
                         {token.balance.toLocaleString()} {token.symbol}
                       </div>

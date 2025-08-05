@@ -12,7 +12,6 @@ import {
   Bell, 
   Shield, 
   Eye, 
-  Globe, 
   Palette, 
   Smartphone, 
   Mail, 
@@ -36,12 +35,12 @@ export default function SettingsPage() {
 
   const handleSaveSettings = () => {
     // TODO: Implement settings save functionality
-    console.log('Settings saved');
+
   };
 
   const handleDeleteAccount = () => {
     // TODO: Implement account deletion with confirmation
-    console.log('Delete account clicked');
+
   };
 
   return (
@@ -185,11 +184,11 @@ export default function SettingsPage() {
                     onChange={(e) => setCurrency(e.target.value)}
                     className="w-full mt-1 px-3 py-2 bg-background border border-border rounded-md text-foreground"
                   >
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="JPY">JPY (¥)</option>
-                    <option value="NPR">NPR (₹)</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="NPR">NPR</option>
                   </select>
                 </div>
               </div>
