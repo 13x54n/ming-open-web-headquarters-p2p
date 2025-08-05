@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { Menu, Wallet, User, Bell, LogOut, Settings, ChevronDown } from "lucide-react"
 import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -23,11 +24,13 @@ export default function P2PNavbar() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const { currentUser, logout } = useAuth()
+  const router = useRouter()
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true)
       await logout()
+      router.push('/')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -47,7 +50,7 @@ export default function P2PNavbar() {
           <div className="flex items-center space-x-4">
             <Link href="/" className="flex items-center space-x-3">
               <Image
-                src="https://avatars.githubusercontent.com/u/179059125?s=400&u=5875d82a5a46d5f63a5f5360f28d3a50f9c660f9&v=4"
+                src="https://ik.imagekit.io/lexy/Ming/3.png?updatedAt=1724359838994"
                 alt="Ming HQ"
                 width={32}
                 height={32}
@@ -155,7 +158,7 @@ export default function P2PNavbar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile" className="cursor-pointer hover:bg-muted/20">
+                  <Link href="/wallet" className="cursor-pointer hover:bg-muted/20">
                     <User className="mr-2 h-4 w-4 text-muted-foreground" />
                     <span className="text-white">Profile</span>
                   </Link>
@@ -224,17 +227,19 @@ export default function P2PNavbar() {
 
                 {/* Mobile Actions */}
                 <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-                  <Button variant="ghost" className="justify-start hover:bg-muted/20" onClick={() => setIsOpen(false)}>
-                    <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="text-white">Notifications</span>
-                    <Badge className="ml-auto bg-red-500 text-white">3</Badge>
-                  </Button>
                   <Button variant="ghost" className="justify-start hover:bg-muted/20" asChild>
-                    <Link href="/profile" onClick={() => setIsOpen(false)}>
+                    <Link href="/notifications" onClick={() => setIsOpen(false)}>
+                      <Bell className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span className="text-white">Notifications</span>
+                      <Badge className="ml-auto bg-red-500 text-white">3</Badge>
+                    </Link>
+                  </Button>
+                  <wallet variant="ghost" className="justify-start hover:bg-muted/20" asChild>
+                    <Link href="/wallet" onClick={() => setIsOpen(false)}>
                       <User className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="text-white">Profile</span>
                     </Link>
-                  </Button>
+                  </wallet>
                   <Button variant="ghost" className="justify-start hover:bg-muted/20" asChild>
                     <Link href="/settings" onClick={() => setIsOpen(false)}>
                       <Settings className="mr-2 h-4 w-4 text-muted-foreground" />

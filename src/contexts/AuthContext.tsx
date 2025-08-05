@@ -3,11 +3,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   User,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail,
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
@@ -17,12 +14,11 @@ import { auth } from '@/lib/firebase';
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName?: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  isNewUser: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string) => Promise<void>;
+  resetWelcomeState: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,42 +34,65 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
 
-  function signUp(email: string, password: string, displayName?: string) {
-    return createUserWithEmailAndPassword(auth, email, password).then((result) => {
-      if (displayName && result.user) {
-        return updateProfile(result.user, { displayName });
-      }
-    });
-  }
-
-  function signIn(email: string, password: string) {
-    return signInWithEmailAndPassword(auth, email, password);
-  }
-
-  function signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
-  }
-
-  function logout() {
-    return signOut(auth);
-  }
-
-  function resetPassword(email: string) {
-    return sendPasswordResetEmail(auth, email);
-  }
-
-  function updateUserProfile(displayName: string) {
-    if (currentUser) {
-      return updateProfile(currentUser, { displayName });
+  async function signInWithGoogle() {
+    try {
+      const provider = new GoogleAuthProvider();
+      // Add additional scopes if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      await signInWithPopup(auth, provider);
+      
+      // Note: Firebase automatically creates a new user account if one doesn't exist
+      // The new user detection will be handled in the onAuthStateChanged callback
+      console.log('User signed in with Google');
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      throw error;
     }
-    throw new Error('No user logged in');
+  }
+
+  async function logout() {
+    await signOut(auth);
+  }
+
+  async function updateUserProfile(displayName: string) {
+    if (currentUser) {
+      await updateProfile(currentUser, { displayName });
+    } else {
+      throw new Error('No user logged in');
+    }
+  }
+
+  function resetWelcomeState() {
+    if (currentUser) {
+      localStorage.removeItem(`welcome-seen-${currentUser.uid}`);
+      setIsNewUser(true);
+    }
   }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      
+      if (user) {
+        // Check if this user has seen the welcome before using localStorage
+        const hasSeenWelcome = localStorage.getItem(`welcome-seen-${user.uid}`);
+        
+        if (!hasSeenWelcome) {
+          // This is a new user or returning user who hasn't seen welcome
+          setIsNewUser(true);
+          console.log('New user or first-time visitor detected');
+        } else {
+          setIsNewUser(false);
+          console.log('Returning user detected');
+        }
+      } else {
+        setIsNewUser(false);
+      }
+      
       setLoading(false);
     });
 
@@ -83,12 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
     currentUser,
     loading,
-    signUp,
-    signIn,
+    isNewUser,
     signInWithGoogle,
     logout,
-    resetPassword,
     updateUserProfile,
+    resetWelcomeState,
   };
 
   return (
