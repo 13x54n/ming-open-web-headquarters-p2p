@@ -2,12 +2,12 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, Wallet, User, Bell, LogOut, Settings, ChevronDown } from "lucide-react"
+import { Menu, Wallet, User, Bell, LogOut, Settings, ChevronDown, X } from "lucide-react"
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -190,7 +190,20 @@ export default function P2PNavbar() {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-card border-border">
+            <SheetContent side="right" className="w-full px-4 sm:w-[400px] bg-card border-border">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <SheetDescription className="sr-only">Mobile navigation menu for Ming HQ</SheetDescription>
+
+              {/* Close Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-4 hover:bg-muted/20"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="sr-only">Close menu</span>
+              </Button>
+
               <div className="flex flex-col space-y-4 mt-4">
                 {/* Mobile User Info */}
                 <div className="flex items-center space-x-4 pb-4 border-b border-border">
@@ -213,20 +226,8 @@ export default function P2PNavbar() {
                   </div>
                 </div>
 
-                {/* Mobile Balance */}
-                <Link href="/wallet" className="flex items-center justify-between bg-muted/20 p-4 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer border border-border">
-                  <div className="flex items-center space-x-2">
-                    <Wallet className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-white">Current Balance</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-white">$6.08</div>
-                    <div className="text-xs text-green-500">+1.69%</div>
-                  </div>
-                </Link>
-
                 {/* Mobile Actions */}
-                <div className="flex flex-col space-y-2 pt-4 border-t border-border">
+                <div className="flex flex-col space-y-2 ">
                   <Button variant="ghost" className="justify-start hover:bg-muted/20" asChild>
                     <Link href="/notifications" onClick={() => setIsOpen(false)}>
                       <Bell className="mr-2 h-4 w-4 text-muted-foreground" />

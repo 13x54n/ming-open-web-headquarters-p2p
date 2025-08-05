@@ -83,7 +83,7 @@ export default function NotificationsPage() {
       <div className="min-h-screen bg-background text-foreground p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-white">Notifications</h1>
               <p className="text-muted-foreground">Stay updated with your account activity</p>
@@ -99,26 +99,6 @@ export default function NotificationsPage() {
               </Button>
             </div>
           </div>
-
-          {/* Notification Stats */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">{notifications.length}</div>
-                  <div className="text-sm text-muted-foreground">Total Notifications</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">{unreadCount}</div>
-                  <div className="text-sm text-muted-foreground">Unread</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">{notifications.length - unreadCount}</div>
-                  <div className="text-sm text-muted-foreground">Read</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Notifications List */}
           <Card>
