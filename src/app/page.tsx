@@ -12,12 +12,7 @@ export default function Home() {
 
   useEffect(() => {
     if (currentUser && isNewUser) {
-      // Add a small delay to ensure localStorage is ready
-      const timer = setTimeout(() => {
-        setShowWelcome(true);
-      }, 100);
-      
-      return () => clearTimeout(timer);
+      setShowWelcome(true);
     } else {
       setShowWelcome(false);
     }

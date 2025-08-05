@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUserProfile: (displayName: string) => Promise<void>;
   resetWelcomeState: () => void;
+  markWelcomeAsSeen: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,6 +79,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function markWelcomeAsSeen() {
+    if (currentUser) {
+      try {
+        localStorage.setItem(`welcome-seen-${currentUser.uid}`, 'true');
+        setIsNewUser(false);
+        console.log('Welcome marked as seen for user:', currentUser.uid);
+      } catch (error) {
+        console.warn('Failed to mark welcome as seen:', error);
+        setIsNewUser(false);
+      }
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -118,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     updateUserProfile,
     resetWelcomeState,
+    markWelcomeAsSeen,
   };
 
   return (

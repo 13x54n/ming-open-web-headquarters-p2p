@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   CheckCircle, 
   Wallet, 
@@ -21,6 +22,7 @@ interface NewUserWelcomeProps {
 
 export default function NewUserWelcome({ onComplete, userName, userId }: NewUserWelcomeProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const { markWelcomeAsSeen } = useAuth();
 
   const steps = [
     {
@@ -66,16 +68,8 @@ export default function NewUserWelcome({ onComplete, userName, userId }: NewUser
   };
 
   const handleComplete = () => {
-    // Mark welcome as seen for this user
-    if (userId) {
-      try {
-        localStorage.setItem(`welcome-seen-${userId}`, 'true');
-        console.log('Welcome state saved for user:', userId);
-      } catch (error) {
-        console.warn('Failed to save welcome state:', error);
-        // Continue with completion even if localStorage fails
-      }
-    }
+    // Mark welcome as seen for this user using AuthContext
+    markWelcomeAsSeen();
     onComplete();
   };
 
