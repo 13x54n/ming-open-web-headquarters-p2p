@@ -68,7 +68,13 @@ export default function NewUserWelcome({ onComplete, userName, userId }: NewUser
   const handleComplete = () => {
     // Mark welcome as seen for this user
     if (userId) {
-      localStorage.setItem(`welcome-seen-${userId}`, 'true');
+      try {
+        localStorage.setItem(`welcome-seen-${userId}`, 'true');
+        console.log('Welcome state saved for user:', userId);
+      } catch (error) {
+        console.warn('Failed to save welcome state:', error);
+        // Continue with completion even if localStorage fails
+      }
     }
     onComplete();
   };

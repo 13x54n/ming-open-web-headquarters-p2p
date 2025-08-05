@@ -68,8 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function resetWelcomeState() {
     if (currentUser) {
-      localStorage.removeItem(`welcome-seen-${currentUser.uid}`);
-      setIsNewUser(true);
+      try {
+        localStorage.removeItem(`welcome-seen-${currentUser.uid}`);
+        setIsNewUser(true);
+      } catch (error) {
+        console.warn('Failed to reset welcome state:', error);
+        setIsNewUser(true);
+      }
     }
   }
 
@@ -79,15 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         // Check if this user has seen the welcome before using localStorage
-        const hasSeenWelcome = localStorage.getItem(`welcome-seen-${user.uid}`);
-        
-        if (!hasSeenWelcome) {
-          // This is a new user or returning user who hasn't seen welcome
+        try {
+          const hasSeenWelcome = localStorage.getItem(`welcome-seen-${user.uid}`);
+          
+          if (!hasSeenWelcome) {
+            // This is a new user or returning user who hasn't seen welcome
+            setIsNewUser(true);
+            console.log('New user or first-time visitor detected');
+          } else {
+            setIsNewUser(false);
+            console.log('Returning user detected');
+          }
+        } catch (error) {
+          // If localStorage fails (e.g., private browsing), treat as new user
+          console.warn('localStorage access failed, treating as new user:', error);
           setIsNewUser(true);
-          console.log('New user or first-time visitor detected');
-        } else {
-          setIsNewUser(false);
-          console.log('Returning user detected');
         }
       } else {
         setIsNewUser(false);
