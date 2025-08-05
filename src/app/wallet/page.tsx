@@ -188,8 +188,8 @@ export default function WalletPage() {
                     <div key={token.id} className="grid grid-cols-4 gap-4 p-4 hover:bg-muted/20 transition-colors">
                       {/* Token Column */}
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <Image src={token.url} alt={token.symbol} width={32} height={32} className="w-full h-full object-cover" />
+                        <div className="w-6 h-6 rounded-full overflow-hidden">
+                          <Image src={token.url} alt={token.symbol} width={26} height={26} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex items-center gap-2">
                           <div>

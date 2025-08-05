@@ -10,6 +10,7 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { sendUserToBackend } from '@/lib/utils';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -37,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
 
+
+
   async function signInWithGoogle() {
     try {
       const provider = new GoogleAuthProvider();
@@ -44,10 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider.addScope('profile');
       provider.addScope('email');
       
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
       
-      // Note: Firebase automatically creates a new user account if one doesn't exist
-      // The new user detection will be handled in the onAuthStateChanged callback
+      // Send user data to backend after successful sign-in
+      if (result.user) {
+        await sendUserToBackend(result.user.uid, result.user.email);
+      }
+      
       console.log('User signed in with Google');
     } catch (error) {
       console.error('Google sign-in error:', error);
@@ -93,10 +99,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       
       if (user) {
+        // Send user data to backend for existing users (sync on page load/refresh)
+        await sendUserToBackend(user.uid, user.email);
+        
         // Check if this user has seen the welcome before using localStorage
         try {
           const hasSeenWelcome = localStorage.getItem(`welcome-seen-${user.uid}`);

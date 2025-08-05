@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "P2P - Firebase Auth",
-  description: "A Next.js app with Firebase Authentication",
+  title: "Ming HQ - DeFi for the masses.",
+  description: "Ming HQ is a DeFi platform that allows you to trade crypto with your friends and family.",
 };
 
 export default function RootLayout({
