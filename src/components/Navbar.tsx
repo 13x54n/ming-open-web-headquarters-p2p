@@ -234,12 +234,12 @@ export default function P2PNavbar() {
                       <Badge className="ml-auto bg-red-500 text-white">3</Badge>
                     </Link>
                   </Button>
-                  <wallet variant="ghost" className="justify-start hover:bg-muted/20" asChild>
+                  <div variant="ghost" className="justify-start hover:bg-muted/20" asChild>
                     <Link href="/wallet" onClick={() => setIsOpen(false)}>
                       <User className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="text-white">Profile</span>
                     </Link>
-                  </wallet>
+                  </div>
                   <Button variant="ghost" className="justify-start hover:bg-muted/20" asChild>
                     <Link href="/settings" onClick={() => setIsOpen(false)}>
                       <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
