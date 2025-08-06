@@ -39,13 +39,16 @@ export default function DashboardPage() {
   const [paymentMethod, setPaymentMethod] = useState('All payment methods');
   const [sortBy, setSortBy] = useState('Sort By Price');
   const [selectedCurrency, setSelectedCurrency] = useState('NPR');
-  
+
   // Create Order Modal State
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
   const [orderCrypto, setOrderCrypto] = useState('USDT');
   const [orderAmount, setOrderAmount] = useState('');
   const [orderPrice, setOrderPrice] = useState('');
+  const [orderMinLimit, setOrderMinLimit] = useState('');
+  const [orderMaxLimit, setOrderMaxLimit] = useState('');
+  const [showLimits, setShowLimits] = useState(false);
   const [orderPaymentMethods, setOrderPaymentMethods] = useState<string[]>([]);
   const [orderAdditionalInfo, setOrderAdditionalInfo] = useState('');
 
@@ -59,28 +62,28 @@ export default function DashboardPage() {
   const [userDataMap, setUserDataMap] = useState<Record<string, any>>({});
 
   // Calculate average price from current orders
-  const averagePrice = orders.length > 0 
-    ? orders.reduce((sum, order) => sum + (order.price || 0), 0) / orders.length 
+  const averagePrice = orders.length > 0
+    ? orders.reduce((sum, order) => sum + (order.price || 0), 0) / orders.length
     : 0;
 
   // Filter orders based on selected payment method, amount, and starting number
   const filteredOrders = orders.filter(order => {
     // Filter by payment method
-    const paymentMethodMatch = paymentMethod === 'All payment methods' || 
+    const paymentMethodMatch = paymentMethod === 'All payment methods' ||
       order.paymentMethods?.includes(paymentMethod);
-    
+
     // Filter by amount if transaction amount is entered
     let amountMatch = true;
     if (transactionAmount && !isNaN(parseFloat(transactionAmount))) {
       const userAmount = parseFloat(transactionAmount);
       const orderPrice = order.price || 0;
-      
+
       // Check if user's amount is within reasonable range of order's price per token
       // Allow ±20% tolerance for price matching
       const tolerance = 0.2; // 20%
       const minPrice = orderPrice * (1 - tolerance);
       const maxPrice = orderPrice * (1 + tolerance);
-      
+
       amountMatch = userAmount >= minPrice && userAmount <= maxPrice;
     }
 
@@ -119,6 +122,39 @@ export default function DashboardPage() {
         return;
       }
 
+      // Validate limits if enabled
+      if (showLimits) {
+        if (!orderMinLimit || !orderMaxLimit) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Please fill in both min and max limits when limits are enabled.",
+          });
+          return;
+        }
+
+        const minLimit = parseFloat(orderMinLimit);
+        const maxLimit = parseFloat(orderMaxLimit);
+
+        if (isNaN(minLimit) || isNaN(maxLimit) || minLimit <= 0 || maxLimit <= 0) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Min and max limits must be positive numbers.",
+          });
+          return;
+        }
+
+        if (minLimit >= maxLimit) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Max limit must be greater than min limit.",
+          });
+          return;
+        }
+      }
+
       // Validate and format data before sending
       const orderData = {
         uid: currentUser?.uid,
@@ -128,6 +164,10 @@ export default function DashboardPage() {
         price: parseFloat(orderPrice), // Send as number, not string
         paymentMethods: orderPaymentMethods,
         additionalInfo: orderAdditionalInfo || '',
+        ...(showLimits && orderMinLimit && orderMaxLimit && {
+          minLimit: parseFloat(orderMinLimit),
+          maxLimit: parseFloat(orderMaxLimit),
+        }),
       };
 
       // Additional validation to match backend expectations
@@ -149,7 +189,7 @@ export default function DashboardPage() {
         return;
       }
 
-      
+
 
       // Create order via API
       const result = await createOrder(orderData);
@@ -160,10 +200,13 @@ export default function DashboardPage() {
         title: "Order Created",
         description: `Order created successfully! Order ID: ${result.data?.order._id}`,
       });
-      
+
       // Reset form and close modal
       setOrderAmount('');
       setOrderPrice('');
+      setOrderMinLimit('');
+      setOrderMaxLimit('');
+      setShowLimits(false);
       setOrderPaymentMethods([]);
       setOrderAdditionalInfo('');
       setShowCreateOrder(false);
@@ -179,8 +222,8 @@ export default function DashboardPage() {
   };
 
   const togglePaymentMethod = (method: string) => {
-    setOrderPaymentMethods(prev => 
-      prev.includes(method) 
+    setOrderPaymentMethods(prev =>
+      prev.includes(method)
         ? prev.filter(m => m !== method)
         : [...prev, method]
     );
@@ -191,13 +234,13 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setOrdersError(null);
-      
+
       // Determine sort parameter based on sortBy state
       let sortParam = '';
       if (sortBy === 'Sort By Price') sortParam = 'price';
       else if (sortBy === 'Sort By Time') sortParam = 'createdAt';
       else if (sortBy === 'Sort By Volume') sortParam = 'amount';
-      
+
       const result = await fetchOrders({
         page: currentPage,
         limit: 10,
@@ -218,6 +261,7 @@ export default function DashboardPage() {
           if (order.uid && !userDataMap[order.uid]) {
             try {
               const userData = await fetchUserData(order.uid);
+
               return { uid: order.uid, userData };
             } catch (error) {
               return { uid: order.uid, userData: null };
@@ -228,7 +272,7 @@ export default function DashboardPage() {
 
         const userDataResults = await Promise.all(userDataPromises);
         const newUserDataMap = { ...userDataMap };
-        
+
         userDataResults.forEach((result) => {
           if (result && result.userData) {
             newUserDataMap[result.uid] = result.userData;
@@ -270,8 +314,6 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <div className="min-h-screen text-foreground p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
-
-
           {/* Main Trading Interface */}
           <CardContent className="py-2 px-3 sm:px-6">
             {/* Buy/Sell Switch and Cryptocurrency Tickers */}
@@ -321,9 +363,8 @@ export default function DashboardPage() {
                     placeholder={averagePrice > 0 ? `Avg: ${averagePrice.toFixed(2)} per token` : "Enter price per token"}
                     value={transactionAmount}
                     onChange={(e) => setTransactionAmount(e.target.value)}
-                    className={`bg-background border-border text-foreground placeholder-muted-foreground pr-20 ${
-                      transactionAmount && !isNaN(parseFloat(transactionAmount)) ? 'border-green-500' : ''
-                    }`}
+                    className={`bg-background border-border text-foreground placeholder-muted-foreground pr-20 ${transactionAmount && !isNaN(parseFloat(transactionAmount)) ? 'border-green-500' : ''
+                      }`}
                   />
                   {transactionAmount && (
                     <Button
@@ -472,7 +513,7 @@ export default function DashboardPage() {
               <div className="hidden sm:grid grid-cols-5 gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b border-border">
                 <div>Advertisers</div>
                 <div>Price</div>
-                <div>Available/Order Limit</div>
+                <div>Available</div>
                 <div>Payment</div>
                 <div>Trade</div>
               </div>
@@ -495,7 +536,7 @@ export default function DashboardPage() {
               {!loading && !ordersError && filteredOrders.length === 0 && (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-muted-foreground">
-                    {orders.length === 0 
+                    {orders.length === 0
                       ? `No ${activeTab} orders found for ${selectedCrypto}`
                       : `No ${activeTab} orders found for ${selectedCrypto}${paymentMethod !== 'All payment methods' ? ` with ${paymentMethod}` : ''}${transactionAmount && !isNaN(parseFloat(transactionAmount)) ? ` around ${parseFloat(transactionAmount).toFixed(2)} per token` : ''}`
                     }
@@ -522,12 +563,11 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </Avatar>
-                                                <div 
-                            className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
-                              userDataMap[order.uid]?.isActive ? 'bg-green-500' : 'bg-gray-400'
-                            }`}
-                            title={userDataMap[order.uid]?.isActive ? 'User is active' : 'User is inactive'}
-                          ></div>
+                      <div
+                        className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${userDataMap[order.uid]?.isActive ? 'bg-green-500' : 'bg-gray-400'
+                          }`}
+                        title={userDataMap[order.uid]?.isActive ? 'User is active' : 'User is inactive'}
+                      ></div>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -537,7 +577,8 @@ export default function DashboardPage() {
 
                       </div>
                       <div className="text-xs text-muted-foreground mb-1">
-                        {order.status} • {new Date(order.createdAt).toLocaleDateString()}
+                        {/* {order.status} • {userDataMap[order.uid]?.totalOrders || 0} orders */}
+                        {userDataMap[order.uid]?.totalOrders || 0} orders
                       </div>
                       <div className="text-xs text-muted-foreground">
                         ⏱️ {new Date(order.createdAt).toLocaleTimeString()}
@@ -556,6 +597,9 @@ export default function DashboardPage() {
                   <div className="flex flex-col justify-center">
                     <div className="font-medium text-foreground">
                       {order.amount?.toFixed(2) || '0.00'} {order.cryptocurrency || selectedCrypto}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      500 • 1000 {order.cryptocurrency || selectedCrypto}
                     </div>
                   </div>
 
@@ -608,10 +652,9 @@ export default function DashboardPage() {
                             </div>
                           )}
                         </Avatar>
-                        <div 
-                          className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
-                            userDataMap[order.uid]?.isActive ? 'bg-green-500' : 'bg-gray-400'
-                          }`}
+                        <div
+                          className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${userDataMap[order.uid]?.isActive ? 'bg-green-500' : 'bg-gray-400'
+                            }`}
                           title={userDataMap[order.uid]?.isActive ? 'User is active' : 'User is inactive'}
                         ></div>
                       </div>
@@ -622,7 +665,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">
-                          {order.status} • {new Date(order.createdAt).toLocaleDateString()}
+                          {order.status} • {userDataMap[order.uid]?.totalOrders || 0} orders • {new Date(order.createdAt).toLocaleDateString()}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           ⏱️ {new Date(order.createdAt).toLocaleTimeString()}
@@ -698,8 +741,8 @@ export default function DashboardPage() {
                             variant={currentPage === pageNum ? "default" : "outline"}
                             size="sm"
                             onClick={() => setCurrentPage(pageNum)}
-                            className={currentPage === pageNum 
-                              ? "bg-primary text-primary-foreground" 
+                            className={currentPage === pageNum
+                              ? "bg-primary text-primary-foreground"
                               : "bg-background border-border text-foreground hover:bg-accent"
                             }
                           >
@@ -741,7 +784,7 @@ export default function DashboardPage() {
                   Create a new {orderType} order for {orderCrypto}
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="grid gap-4 py-4">
                 {/* Order Type Toggle */}
                 <div className="flex items-center gap-4">
@@ -806,6 +849,41 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
+
+                {/* Limits Toggle */}
+                <div className="flex items-center gap-4">
+                  <Label>Set Trading Limits</Label>
+                  <Switch
+                    checked={showLimits}
+                    onCheckedChange={setShowLimits}
+                  />
+                </div>
+
+                {/* Min and Max Limits */}
+                {showLimits && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="minLimit">Min Limit ({orderCrypto})</Label>
+                      <Input
+                        id="minLimit"
+                        type="number"
+                        placeholder="0.00"
+                        value={orderMinLimit}
+                        onChange={(e) => setOrderMinLimit(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="maxLimit">Max Limit ({orderCrypto})</Label>
+                      <Input
+                        id="maxLimit"
+                        type="number"
+                        placeholder="0.00"
+                        value={orderMaxLimit}
+                        onChange={(e) => setOrderMaxLimit(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Methods */}
                 <div className="grid gap-2">

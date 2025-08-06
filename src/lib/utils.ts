@@ -28,6 +28,7 @@ interface UserData {
   displayName: string | null;
   photoURL: string | null;
   isActive?: boolean;
+  totalOrders?: number;
 }
 
 // Utility function to send user data to backend
@@ -145,13 +146,15 @@ export async function fetchUserData(uid: string): Promise<UserData | null> {
 
     if (response.ok) {
       const data = await response.json();
+      
       if (data.success) {
         return {
-          uid: data.data.user.uid,
-          email: data.data.user.email,
-          displayName: data.data.user.displayName || `User ${uid.slice(-4)}`,
-          photoURL: data.data.user.photoURL || null,
-          isActive: data.data.user.isActive !== false, // Default to true if not specified
+          uid: data.data.uid,
+          email: data.data.email,
+          displayName: data.data.displayName || `User ${uid.slice(-4)}`,
+          photoURL: data.data.photoURL || null,
+          isActive: data.data.isActive !== false, // Default to true if not specified
+          totalOrders: data.data.totalOrders || 0,
         };
       }
     }
@@ -163,6 +166,7 @@ export async function fetchUserData(uid: string): Promise<UserData | null> {
       displayName: `User ${uid.slice(-4)}`,
       photoURL: null,
       isActive: true, // Default to active for fallback
+      totalOrders: 0,
     };
   } catch (error) {
     // Return fallback data if backend is not available
@@ -172,6 +176,7 @@ export async function fetchUserData(uid: string): Promise<UserData | null> {
       displayName: `User ${uid.slice(-4)}`,
       photoURL: null,
       isActive: true, // Default to active for fallback
+      totalOrders: 0,
     };
   }
 }
