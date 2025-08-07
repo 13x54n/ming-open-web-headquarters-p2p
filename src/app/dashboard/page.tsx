@@ -537,7 +537,11 @@ export default function DashboardPage() {
                         <span className="font-medium text-foreground">
                           {userDataMap[order.uid]?.displayName || `User ${order.uid?.slice(-4) || 'user'}`}
                         </span>
-
+                        {currentUser?.uid === order.uid && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Your Order
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground mb-1">
                         {/* {order.status} • {userDataMap[order.uid]?.totalOrders || 0} orders */}
@@ -584,16 +588,27 @@ export default function DashboardPage() {
 
                   {/* Trade Column */}
                   <div className="flex items-center">
-                    <Button
-                      variant={activeTab === 'buy' ? 'default' : 'outline'}
-                      className={`${activeTab === 'buy'
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-red-600 hover:bg-red-700 text-white'
-                        }`}
-                      onClick={() => router.push(`/order/${order._id}`)}
-                    >
-                      {activeTab === 'buy' ? `Buy ${selectedCrypto}` : `Sell ${selectedCrypto}`}
-                    </Button>
+                    {currentUser?.uid === order.uid ? (
+                      <Button
+                        variant="outline"
+                        disabled
+                        className="bg-gray-100 text-gray-500 cursor-not-allowed"
+                        title="You cannot trade on your own order"
+                      >
+                        Your Order
+                      </Button>
+                    ) : (
+                      <Button
+                        variant={activeTab === 'buy' ? 'default' : 'outline'}
+                        className={`${activeTab === 'buy'
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                          }`}
+                        onClick={() => router.push(`/order/${order._id}`)}
+                      >
+                        {activeTab === 'buy' ? `Buy ${selectedCrypto}` : `Sell ${selectedCrypto}`}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -630,6 +645,11 @@ export default function DashboardPage() {
                           <span className="font-medium text-foreground">
                             {userDataMap[order.uid]?.displayName || `User ${order.uid?.slice(-4) || 'user'}`}
                           </span>
+                          {currentUser?.uid === order.uid && (
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              Your Order
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground mb-1">
                           {order.status} • {userDataMap[order.uid]?.totalOrders || 0} orders • {new Date(order.createdAt).toLocaleDateString()}
@@ -669,16 +689,27 @@ export default function DashboardPage() {
                         })}
                       </div>
 
-                      <Button
-                        variant={activeTab === 'buy' ? 'default' : 'outline'}
-                        className={`${activeTab === 'buy'
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-red-600 hover:bg-red-700 text-white'
-                          }`}
-                        onClick={() => router.push(`/order/${order._id}`)}
-                      >
-                        {activeTab === 'buy' ? `Buy ${order.cryptocurrency || selectedCrypto}` : `Sell ${order.cryptocurrency || selectedCrypto}`}
-                      </Button>
+                      {currentUser?.uid === order.uid ? (
+                        <Button
+                          variant="outline"
+                          disabled
+                          className="bg-gray-100 text-gray-500 cursor-not-allowed"
+                          title="You cannot trade on your own order"
+                        >
+                          Your Order
+                        </Button>
+                      ) : (
+                        <Button
+                          variant={activeTab === 'buy' ? 'default' : 'outline'}
+                          className={`${activeTab === 'buy'
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-red-600 hover:bg-red-700 text-white'
+                            }`}
+                          onClick={() => router.push(`/order/${order._id}`)}
+                        >
+                          {activeTab === 'buy' ? `Buy ${order.cryptocurrency || selectedCrypto}` : `Sell ${order.cryptocurrency || selectedCrypto}`}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -423,6 +423,12 @@ export default function OrderDetailPage() {
       return;
     }
 
+    // Prevent trading on own orders
+    if (currentUser.uid === order?.uid) {
+      toast.error("You cannot trade on your own order.");
+      return;
+    }
+
     if (!tradeAmount || !selectedPaymentMethod) {
       toast.error("Please fill in all required fields.");
       return;
@@ -776,80 +782,93 @@ export default function OrderDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                {/* Amount Input */}
-                <div>
-                  <Label htmlFor="tradeAmount">Amount ({order.cryptocurrency})</Label>
-                  <Input
-                    id="tradeAmount"
-                    type="number"
-                    placeholder="0.00"
-                    value={tradeAmount}
-                    onChange={(e) => handleTradeAmountChange(e.target.value)}
-                    className="mt-1"
-                  />
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Available: {order.amount.toFixed(2)} {order.cryptocurrency}
-                    {order.minLimit && order.maxLimit && (
-                      <span> • Min: {order.minLimit} • Max: {order.maxLimit}</span>
-                    )}
-                    {(!order.minLimit || !order.maxLimit) && (
-                      <span> • No trading limits</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Total Value */}
-                <div className="bg-muted p-3 rounded-md">
-                  <Label className="text-sm text-muted-foreground">Total Value (NPR)</Label>
-                  <div className="text-xl font-bold">
-                    NPR {calculateTotalValue().toFixed(2)}
-                  </div>
-                </div>
-
-                {/* Payment Method Selection */}
-                <div>
-                  <Label>Payment Method</Label>
-                  <div className="grid grid-cols-1 gap-2 mt-2">
-                    {order.paymentMethods.map((method) => (
-                      <Button
-                        key={method}
-                        variant={selectedPaymentMethod === method ? "default" : "outline"}
-                        onClick={() => setSelectedPaymentMethod(method)}
-                        className="justify-start"
-                      >
-                        <div className={`w-3 h-3 ${PAYMENT_METHODS.find(pm => pm.name === method)?.color || 'bg-gray-500'} rounded-full mr-3`}></div>
-                        {method}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Trade Button */}
-                <Button
-                  onClick={handleTrade}
-                  disabled={isSubmitting || !tradeAmount || !selectedPaymentMethod}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing...
+                  {/* Check if user is trying to trade on their own order */}
+                  {currentUser?.uid === order.uid ? (
+                    <div className="flex items-center gap-2 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                      <AlertCircle className="w-5 h-5 text-yellow-500" />
+                      <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                        <div className="font-medium">Cannot Trade on Your Own Order</div>
+                        <div className="mt-1">You cannot trade on orders that you have created. This prevents self-trading and ensures fair marketplace operations.</div>
+                      </div>
                     </div>
                   ) : (
-                    `${order.type === 'sell' ? 'Buy' : 'Sell'} ${order.cryptocurrency}`
-                  )}
-                </Button>
+                    <>
+                      {/* Amount Input */}
+                      <div>
+                        <Label htmlFor="tradeAmount">Amount ({order.cryptocurrency})</Label>
+                        <Input
+                          id="tradeAmount"
+                          type="number"
+                          placeholder="0.00"
+                          value={tradeAmount}
+                          onChange={(e) => handleTradeAmountChange(e.target.value)}
+                          className="mt-1"
+                        />
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Available: {order.amount.toFixed(2)} {order.cryptocurrency}
+                          {order.minLimit && order.maxLimit && (
+                            <span> • Min: {order.minLimit} • Max: {order.maxLimit}</span>
+                          )}
+                          {(!order.minLimit || !order.maxLimit) && (
+                            <span> • No trading limits</span>
+                          )}
+                        </div>
+                      </div>
 
-                {/* Warning */}
-                <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
-                  <AlertCircle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-yellow-700 dark:text-yellow-300">
-                    Make sure to complete the payment and confirm with the trader before marking the trade as complete.
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      {/* Total Value */}
+                      <div className="bg-muted p-3 rounded-md">
+                        <Label className="text-sm text-muted-foreground">Total Value (NPR)</Label>
+                        <div className="text-xl font-bold">
+                          NPR {calculateTotalValue().toFixed(2)}
+                        </div>
+                      </div>
+
+                      {/* Payment Method Selection */}
+                      <div>
+                        <Label>Payment Method</Label>
+                        <div className="grid grid-cols-1 gap-2 mt-2">
+                          {order.paymentMethods.map((method) => (
+                            <Button
+                              key={method}
+                              variant={selectedPaymentMethod === method ? "default" : "outline"}
+                              onClick={() => setSelectedPaymentMethod(method)}
+                              className="justify-start"
+                            >
+                              <div className={`w-3 h-3 ${PAYMENT_METHODS.find(pm => pm.name === method)?.color || 'bg-gray-500'} rounded-full mr-3`}></div>
+                              {method}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Trade Button */}
+                      <Button
+                        onClick={handleTrade}
+                        disabled={isSubmitting || !tradeAmount || !selectedPaymentMethod}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Processing...
+                          </div>
+                        ) : (
+                          `${order.type === 'sell' ? 'Buy' : 'Sell'} ${order.cryptocurrency}`
+                        )}
+                      </Button>
+
+                      {/* Warning */}
+                      <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                        <AlertCircle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                          Make sure to complete the payment and confirm with the trader before marking the trade as complete.
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             {/* Trade Actions */}
