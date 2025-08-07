@@ -268,10 +268,7 @@ export default function DashboardPage() {
     loadOrders();
   };
 
-  const clearAllFilters = () => {
-    setTransactionAmount('');
-    setPaymentMethod('All payment methods');
-  };
+
 
   return (
     <ProtectedRoute>

@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, AlertCircle, CheckCircle, Info, MessageCircle } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -62,13 +61,7 @@ interface Trade {
   supportReason?: string;
 }
 
-interface ChatMessage {
-  _id: string;
-  tradeId: string;
-  senderUid: string;
-  message: string;
-  timestamp: string;
-}
+
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -92,10 +85,7 @@ export default function OrderDetailPage() {
   const [supportReason, setSupportReason] = useState('');
   const [showSupportDialog, setShowSupportDialog] = useState(false);
   
-  // Chat state
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [showChat, setShowChat] = useState(false);
+
 
   // Payment method information
   const paymentMethodInfo: Record<string, PaymentMethodInfo> = {
@@ -338,84 +328,7 @@ export default function OrderDetailPage() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !currentTrade) return;
-    
-    const messageData = {
-      tradeId: currentTrade._id,
-      senderUid: currentUser?.uid,
-      message: newMessage.trim(),
-    };
 
-    try {
-      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messageData),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          const newChatMessage: ChatMessage = {
-            _id: result.data.message._id,
-            tradeId: currentTrade._id,
-            senderUid: currentUser?.uid || '',
-            message: newMessage.trim(),
-            timestamp: new Date().toISOString(),
-          };
-          setChatMessages([...chatMessages, newChatMessage]);
-          setNewMessage('');
-        }
-      }
-    } catch (error) {
-      console.warn('Backend not available, simulating message:', error);
-      const newChatMessage: ChatMessage = {
-        _id: Date.now().toString(),
-        tradeId: currentTrade._id,
-        senderUid: currentUser?.uid || '',
-        message: newMessage.trim(),
-        timestamp: new Date().toISOString(),
-      };
-      setChatMessages([...chatMessages, newChatMessage]);
-      setNewMessage('');
-    }
-  };
-
-  const loadChatMessages = async (tradeId: string) => {
-    try {
-      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat/${tradeId}`);
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setChatMessages(result.data.messages);
-        }
-      }
-    } catch (error) {
-      console.warn('Backend not available, using mock chat:', error);
-      // Mock chat messages for demo
-      const mockMessages: ChatMessage[] = [
-        {
-          _id: '1',
-          tradeId,
-          senderUid: currentUser?.uid || '',
-          message: 'Hi! I\'ve initiated the trade. Please confirm when you\'re ready.',
-          timestamp: new Date(Date.now() - 300000).toISOString(),
-        },
-        {
-          _id: '2',
-          tradeId,
-          senderUid: order?.uid || '',
-          message: 'Hello! I\'ve received your payment. Sending the crypto now.',
-          timestamp: new Date(Date.now() - 180000).toISOString(),
-        },
-      ];
-      setChatMessages(mockMessages);
-    }
-  };
 
   const handleTrade = async () => {
     if (!currentUser) {
@@ -632,7 +545,7 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
 
-                <Separator />
+                <div className="border-t border-border my-4"></div>
 
                 {/* Order Details */}
                 <div className="grid grid-cols-2 gap-4">
