@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +28,11 @@ import { ChevronDown, Plus, RefreshCw } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { PAYMENT_METHODS, CURRENCIES, CRYPTOCURRENCIES } from '@/lib/constants';
 import { createOrder, fetchOrders, fetchUserData } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
-  const { toast } = useToast();
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
   const [selectedCrypto, setSelectedCrypto] = useState('USDT');
@@ -104,32 +105,20 @@ export default function DashboardPage() {
     try {
       // Check if user is authenticated
       if (!currentUser?.uid) {
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "You must be logged in to create an order.",
-        });
+        toast.error("You must be logged in to create an order.");
         return;
       }
 
       // Validate required fields
       if (!orderAmount || !orderPrice || orderPaymentMethods.length === 0) {
-        toast({
-          variant: "destructive",
-          title: "Validation Error",
-          description: "Please fill in all required fields and select at least one payment method.",
-        });
+        toast.error("Please fill in all required fields and select at least one payment method.");
         return;
       }
 
       // Validate limits if enabled
       if (showLimits) {
         if (!orderMinLimit || !orderMaxLimit) {
-          toast({
-            variant: "destructive",
-            title: "Validation Error",
-            description: "Please fill in both min and max limits when limits are enabled.",
-          });
+          toast.error("Please fill in both min and max limits when limits are enabled.");
           return;
         }
 
@@ -137,20 +126,12 @@ export default function DashboardPage() {
         const maxLimit = parseFloat(orderMaxLimit);
 
         if (isNaN(minLimit) || isNaN(maxLimit) || minLimit <= 0 || maxLimit <= 0) {
-          toast({
-            variant: "destructive",
-            title: "Validation Error",
-            description: "Min and max limits must be positive numbers.",
-          });
+          toast.error("Min and max limits must be positive numbers.");
           return;
         }
 
         if (minLimit >= maxLimit) {
-          toast({
-            variant: "destructive",
-            title: "Validation Error",
-            description: "Max limit must be greater than min limit.",
-          });
+          toast.error("Max limit must be greater than min limit.");
           return;
         }
       }
@@ -172,20 +153,12 @@ export default function DashboardPage() {
 
       // Additional validation to match backend expectations
       if (isNaN(orderData.amount) || orderData.amount <= 0) {
-        toast({
-          variant: "destructive",
-          title: "Validation Error",
-          description: "Amount must be a positive number.",
-        });
+        toast.error("Amount must be a positive number.");
         return;
       }
 
       if (isNaN(orderData.price) || orderData.price <= 0) {
-        toast({
-          variant: "destructive",
-          title: "Validation Error",
-          description: "Price must be a positive number.",
-        });
+        toast.error("Price must be a positive number.");
         return;
       }
 
@@ -195,11 +168,7 @@ export default function DashboardPage() {
       const result = await createOrder(orderData);
 
       // Show success message
-      toast({
-        variant: "success",
-        title: "Order Created",
-        description: `Order created successfully! Order ID: ${result.data?.order._id}`,
-      });
+      toast.success(`Order created successfully! Order ID: ${result.data?.order._id}`);
 
       // Reset form and close modal
       setOrderAmount('');
@@ -213,11 +182,7 @@ export default function DashboardPage() {
       handleOrderCreated(); // Refresh orders after creation
     } catch (error) {
 
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to create order: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      });
+      toast.error(`Failed to create order: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -285,11 +250,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       setOrdersError(error instanceof Error ? error.message : 'Failed to load orders');
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load orders from server.",
-      });
+      toast.error("Failed to load orders from server.");
     } finally {
       setLoading(false);
     }
@@ -598,9 +559,12 @@ export default function DashboardPage() {
                     <div className="font-medium text-foreground">
                       {order.amount?.toFixed(2) || '0.00'} {order.cryptocurrency || selectedCrypto}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      500 • 1000 {order.cryptocurrency || selectedCrypto}
-                    </div>
+                                         <div className="text-xs text-muted-foreground mt-1">
+                       {order.minLimit && order.maxLimit 
+                         ? `${order.minLimit} • ${order.maxLimit} ${order.cryptocurrency || selectedCrypto}`
+                         : `No limits set`
+                       }
+                     </div>
                   </div>
 
                   {/* Payment Column */}
@@ -624,6 +588,7 @@ export default function DashboardPage() {
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : 'bg-red-600 hover:bg-red-700 text-white'
                         }`}
+                      onClick={() => router.push(`/order/${order._id}`)}
                     >
                       {activeTab === 'buy' ? `Buy ${selectedCrypto}` : `Sell ${selectedCrypto}`}
                     </Button>
@@ -708,6 +673,7 @@ export default function DashboardPage() {
                           ? 'bg-green-600 hover:bg-green-700 text-white'
                           : 'bg-red-600 hover:bg-red-700 text-white'
                           }`}
+                        onClick={() => router.push(`/order/${order._id}`)}
                       >
                         {activeTab === 'buy' ? `Buy ${order.cryptocurrency || selectedCrypto}` : `Sell ${order.cryptocurrency || selectedCrypto}`}
                       </Button>
