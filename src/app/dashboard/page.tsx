@@ -34,6 +34,8 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function DashboardPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
+  
+
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
   const [selectedCrypto, setSelectedCrypto] = useState('USDT');
   const [transactionAmount, setTransactionAmount] = useState('');
@@ -560,8 +562,8 @@ export default function DashboardPage() {
                       {order.amount?.toFixed(2) || '0.00'} {order.cryptocurrency || selectedCrypto}
                     </div>
                                          <div className="text-xs text-muted-foreground mt-1">
-                       {order.minLimit && order.maxLimit 
-                         ? `${order.minLimit} • ${order.maxLimit} ${order.cryptocurrency || selectedCrypto}`
+                       {order.minOrderLimit && order.maxOrderLimit 
+                         ? `${order.minOrderLimit} • ${order.maxOrderLimit} ${order.cryptocurrency || selectedCrypto}`
                          : `No limits set`
                        }
                      </div>

@@ -1,11 +1,11 @@
 {
   "name": "Ming HQ",
   "short_name": "Ming",
-  "description": "Peer-to-peer cryptocurrency trading platform",
+  "description": "Peer-to-peer escrow for people. Powered by Ming.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
+  "background_color": "#000000",
+  "theme_color": "##1e272e",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
@@ -64,7 +64,7 @@
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
-      "description": "View trading dashboard",
+      "description": "Dashboard after login.",
       "url": "/dashboard",
       "icons": [
         {
@@ -76,7 +76,7 @@
     {
       "name": "Create Order",
       "short_name": "New Order",
-      "description": "Create a new trading order",
+      "description": "Create a new buy/sell token order",
       "url": "/dashboard?action=create",
       "icons": [
         {
