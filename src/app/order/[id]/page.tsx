@@ -179,7 +179,7 @@ export default function OrderDetailPage() {
 
       // Fetch order data from backend
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/orders/${orderId}`);
+        const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/orders/${orderId}`);
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -287,7 +287,7 @@ export default function OrderDetailPage() {
     if (!currentTrade) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${currentTrade._id}/complete`, {
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${currentTrade._id}/complete`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -312,7 +312,7 @@ export default function OrderDetailPage() {
     if (!currentTrade || !supportReason.trim()) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${currentTrade._id}/support`, {
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${currentTrade._id}/support`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -348,7 +348,7 @@ export default function OrderDetailPage() {
     };
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat`, {
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -386,7 +386,7 @@ export default function OrderDetailPage() {
 
   const loadChatMessages = async (tradeId: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat/${tradeId}`);
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat/${tradeId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -438,7 +438,7 @@ export default function OrderDetailPage() {
 
     try {
       // Execute trade via backend API
-      const tradeData = {
+      const tradeRequestData = {
         orderId: order?._id,
         amount: parseFloat(tradeAmount),
         paymentMethod: selectedPaymentMethod,
@@ -447,12 +447,12 @@ export default function OrderDetailPage() {
       };
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades`, {
+        const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(tradeData),
+          body: JSON.stringify(tradeRequestData),
         });
 
         if (!response.ok) {
@@ -466,14 +466,14 @@ export default function OrderDetailPage() {
           throw new Error(result.message || 'Failed to execute trade');
         }
 
-        const tradeData = {
+        const tradeData: Trade = {
           _id: result.data.trade._id,
-          orderId: order?._id,
-          buyerUid: currentUser?.uid,
-          sellerUid: order?.uid,
+          orderId: order?._id || '',
+          buyerUid: currentUser?.uid || '',
+          sellerUid: order?.uid || '',
           amount: parseFloat(tradeAmount),
           paymentMethod: selectedPaymentMethod,
-          status: 'pending' as const,
+          status: 'pending',
           createdAt: new Date().toISOString(),
         };
         
@@ -491,14 +491,14 @@ export default function OrderDetailPage() {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        const tradeData = {
+        const tradeData: Trade = {
           _id: Date.now().toString(),
-          orderId: order?._id,
-          buyerUid: currentUser?.uid,
-          sellerUid: order?.uid,
+          orderId: order?._id || '',
+          buyerUid: currentUser?.uid || '',
+          sellerUid: order?.uid || '',
           amount: parseFloat(tradeAmount),
           paymentMethod: selectedPaymentMethod,
-          status: 'pending' as const,
+          status: 'pending',
           createdAt: new Date().toISOString(),
         };
         

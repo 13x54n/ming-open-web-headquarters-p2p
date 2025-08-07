@@ -110,7 +110,7 @@ export default function ChatPage() {
         setTrade(tradeData);
 
         // Load order data
-        const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/orders/${tradeData.orderId}`);
+        const orderResponse: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/orders/${tradeData.orderId}`);
         if (orderResponse.ok) {
           const orderResult = await orderResponse.json();
           if (orderResult.success) {
@@ -196,7 +196,7 @@ export default function ChatPage() {
 
   const loadChatMessages = async (tradeId: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat/${tradeId}`);
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat/${tradeId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -244,7 +244,7 @@ export default function ChatPage() {
     };
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat`, {
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -284,7 +284,7 @@ export default function ChatPage() {
     if (!trade) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${trade._id}/complete`, {
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${trade._id}/complete`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -309,7 +309,7 @@ export default function ChatPage() {
     if (!trade || !supportReason.trim()) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${trade._id}/support`, {
+      const response: Response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/trades/${trade._id}/support`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
