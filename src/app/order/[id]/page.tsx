@@ -442,8 +442,110 @@ export default function OrderDetailPage() {
       <ProtectedRoute>
         <div className="min-h-screen text-foreground p-4 sm:p-6">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading order details...</div>
+            {/* Header Skeleton */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-9 w-16 bg-muted rounded animate-pulse"></div>
+              <div className="h-8 w-32 bg-muted rounded animate-pulse"></div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Order Information Skeleton */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-16 bg-muted rounded animate-pulse"></div>
+                    <div className="h-6 w-12 bg-muted rounded animate-pulse"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Trader Info Skeleton */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-muted rounded-full animate-pulse"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
+                      <div className="h-3 w-40 bg-muted rounded animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border my-4"></div>
+
+                  {/* Order Details Skeleton */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="h-3 w-12 bg-muted rounded animate-pulse mb-2"></div>
+                      <div className="h-6 w-20 bg-muted rounded animate-pulse"></div>
+                    </div>
+                    <div>
+                      <div className="h-3 w-16 bg-muted rounded animate-pulse mb-2"></div>
+                      <div className="h-6 w-24 bg-muted rounded animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Trading Limits Skeleton */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="h-3 w-16 bg-muted rounded animate-pulse mb-2"></div>
+                      <div className="h-5 w-20 bg-muted rounded animate-pulse"></div>
+                    </div>
+                    <div>
+                      <div className="h-3 w-16 bg-muted rounded animate-pulse mb-2"></div>
+                      <div className="h-5 w-20 bg-muted rounded animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Payment Methods Skeleton */}
+                  <div>
+                    <div className="h-3 w-24 bg-muted rounded animate-pulse mb-2"></div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="h-6 w-16 bg-muted rounded animate-pulse"></div>
+                      <div className="h-6 w-20 bg-muted rounded animate-pulse"></div>
+                      <div className="h-6 w-18 bg-muted rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trading Form Skeleton */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-muted rounded animate-pulse"></div>
+                    <div className="h-6 w-32 bg-muted rounded animate-pulse"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Amount Input Skeleton */}
+                  <div>
+                    <div className="h-4 w-20 bg-muted rounded animate-pulse mb-2"></div>
+                    <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                    <div className="h-3 w-32 bg-muted rounded animate-pulse mt-1"></div>
+                  </div>
+
+                  {/* Total Value Skeleton */}
+                  <div className="bg-muted p-3 rounded-md">
+                    <div className="h-3 w-24 bg-background rounded animate-pulse mb-2"></div>
+                    <div className="h-8 w-32 bg-background rounded animate-pulse"></div>
+                  </div>
+
+                  {/* Payment Method Selection Skeleton */}
+                  <div>
+                    <div className="h-4 w-24 bg-muted rounded animate-pulse mb-2"></div>
+                    <div className="space-y-2">
+                      <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                      <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Trade Button Skeleton */}
+                  <div className="h-12 w-full bg-muted rounded animate-pulse"></div>
+
+                  {/* Warning Skeleton */}
+                  <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                    <div className="w-4 h-4 bg-muted rounded animate-pulse mt-0.5"></div>
+                    <div className="h-4 w-full bg-muted rounded animate-pulse"></div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

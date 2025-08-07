@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import PWAInstall from "@/components/PWAInstall";
+import LoadingScreen from "@/components/LoadingScreen";
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster as HotToaster } from "react-hot-toast"
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <LoadingScreen />
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <NavbarWrapper />

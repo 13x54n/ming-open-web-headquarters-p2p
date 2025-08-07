@@ -478,11 +478,88 @@ export default function DashboardPage() {
                 <div>Trade</div>
               </div>
 
-              {/* Loading State */}
+              {/* Loading State with Skeletons */}
               {loading && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-muted-foreground">Loading orders...</div>
-                </div>
+                <>
+                  {/* Desktop Skeletons */}
+                  <div className="hidden sm:space-y-4">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <div key={`skeleton-${index}`} className="grid grid-cols-5 gap-4 px-4 pb-4 border-b border-border">
+                        {/* Advertiser Skeleton */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-7 h-7 bg-muted rounded-full animate-pulse"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
+                            <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                            <div className="h-3 bg-muted rounded animate-pulse w-20"></div>
+                          </div>
+                        </div>
+                        {/* Price Skeleton */}
+                        <div className="flex items-center">
+                          <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
+                        </div>
+                        {/* Available Skeleton */}
+                        <div className="flex flex-col justify-center space-y-1">
+                          <div className="h-5 bg-muted rounded animate-pulse w-20"></div>
+                          <div className="h-3 bg-muted rounded animate-pulse w-24"></div>
+                        </div>
+                        {/* Payment Skeleton */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-3 bg-muted rounded-sm animate-pulse"></div>
+                            <div className="h-4 bg-muted rounded animate-pulse w-16"></div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-3 bg-muted rounded-sm animate-pulse"></div>
+                            <div className="h-4 bg-muted rounded animate-pulse w-20"></div>
+                          </div>
+                        </div>
+                        {/* Trade Button Skeleton */}
+                        <div className="flex items-center">
+                          <div className="h-9 bg-muted rounded animate-pulse w-24"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mobile Skeletons */}
+                  <div className="sm:hidden space-y-4">
+                    {Array.from({ length: 3 }, (_, index) => (
+                      <div key={`mobile-skeleton-${index}`} className="border border-border rounded-lg p-4 space-y-3">
+                        {/* Trader Info Skeleton */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-muted rounded-full animate-pulse"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-muted rounded animate-pulse w-32"></div>
+                            <div className="h-3 bg-muted rounded animate-pulse w-40"></div>
+                            <div className="h-3 bg-muted rounded animate-pulse w-24"></div>
+                          </div>
+                        </div>
+                        {/* Price and Available Skeleton */}
+                        <div className="flex justify-between items-center">
+                          <div className="h-6 bg-muted rounded animate-pulse w-20"></div>
+                          <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
+                        </div>
+                        {/* Order Info Skeleton */}
+                        <div className="h-4 bg-muted rounded animate-pulse w-32"></div>
+                        {/* Payment and Action Skeleton */}
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1 h-3 bg-muted rounded-sm animate-pulse"></div>
+                              <div className="h-4 bg-muted rounded animate-pulse w-16"></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-1 h-3 bg-muted rounded-sm animate-pulse"></div>
+                              <div className="h-4 bg-muted rounded animate-pulse w-20"></div>
+                            </div>
+                          </div>
+                          <div className="h-10 bg-muted rounded animate-pulse w-24"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
               {/* Error State */}
