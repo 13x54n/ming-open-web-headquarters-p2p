@@ -68,6 +68,13 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
   
+  // Helper function to format numbers without unnecessary decimal zeros
+  const formatNumber = (num: number, decimals: number = 2) => {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    const fixed = num.toFixed(decimals);
+    return fixed.replace(/\.?0+$/, '');
+  };
+  
   const [order, setOrder] = useState<Order | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -654,13 +661,13 @@ export default function OrderDetailPage() {
                   <div>
                     <Label className="text-sm text-muted-foreground">Price</Label>
                     <div className="text-lg font-semibold">
-                      NPR {order.price.toFixed(2)}
+                      NPR {formatNumber(order.price)}
                     </div>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Available</Label>
                     <div className="text-lg font-semibold">
-                      {order.amount.toFixed(2)} {order.cryptocurrency}
+                      {formatNumber(order.amount)} {order.cryptocurrency}
                     </div>
                   </div>
                 </div>
@@ -820,9 +827,9 @@ export default function OrderDetailPage() {
                           className="mt-1"
                         />
                         <div className="text-xs text-muted-foreground mt-1">
-                          Available: {order.amount.toFixed(2)} {order.cryptocurrency}
+                          Available: {formatNumber(order.amount)} {order.cryptocurrency}
                           {order.minLimit && order.maxLimit && (
-                            <span> • Min: {order.minLimit} • Max: {order.maxLimit}</span>
+                            <span> • Min: {formatNumber(order.minLimit)} • Max: {formatNumber(order.maxLimit)}</span>
                           )}
                           {(!order.minLimit || !order.maxLimit) && (
                             <span> • No trading limits</span>
@@ -834,7 +841,7 @@ export default function OrderDetailPage() {
                       <div className="bg-muted p-3 rounded-md">
                         <Label className="text-sm text-muted-foreground">Total Value (NPR)</Label>
                         <div className="text-xl font-bold">
-                          NPR {calculateTotalValue().toFixed(2)}
+                          NPR {formatNumber(calculateTotalValue())}
                         </div>
                       </div>
 

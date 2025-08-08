@@ -23,12 +23,6 @@ export const PAYMENT_METHODS = [
     name: 'Connect IPS', 
     color: 'bg-blue-500',
     description: 'Connect IPS payment'
-  },
-  { 
-    id: 'mobile_banking',
-    name: 'Mobile Banking', 
-    color: 'bg-orange-500',
-    description: 'Mobile banking apps'
   }
 ] as const;
 

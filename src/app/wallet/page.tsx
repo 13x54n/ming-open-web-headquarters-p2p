@@ -17,6 +17,13 @@ import { Button } from '@/components/ui/button';
 
 export default function WalletPage() {
   const [activeTab, setActiveTab] = useState('assets');
+  
+  // Helper function to format numbers without unnecessary decimal zeros
+  const formatNumber = (num: number, decimals: number = 2) => {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    const fixed = num.toFixed(decimals);
+    return fixed.replace(/\.?0+$/, '');
+  };
 
   const tokens = [
     {
@@ -100,11 +107,11 @@ export default function WalletPage() {
             <div className="space-y-2">
               <h1 className="text-lg sm:text-xl font-semibold text-white">Estimated Balance</h1>
               <div className="flex items-center gap-2">
-                <span className="text-3xl sm:text-4xl font-bold text-white">{totalValue.toFixed(2)}</span>
+                <span className="text-3xl sm:text-4xl font-bold text-white">{formatNumber(totalValue)}</span>
               </div>
               <div className="flex items-center gap-1 text-green-500 text-sm">
                 <TrendingUp className="h-4 w-4" />
-                                  <span>+{dailyChange.toFixed(2)} (+{dailyChangePercent.toFixed(2)}%)</span>
+                                  <span>+{formatNumber(dailyChange)} (+{formatNumber(dailyChangePercent)}%)</span>
               </div>
             </div>
 
@@ -201,7 +208,7 @@ export default function WalletPage() {
 
                       {/* Portfolio % Column */}
                       <div className="flex items-center">
-                        <span className="text-sm">{token.portfolioPercent.toFixed(2)}%</span>
+                        <span className="text-sm">{formatNumber(token.portfolioPercent)}%</span>
                       </div>
 
                       {/* Price Column */}
@@ -215,7 +222,7 @@ export default function WalletPage() {
                             ) : (
                               <TrendingDown className="h-3 w-3" />
                             )}
-                            <span>{Math.abs(token.priceChange).toFixed(2)}%</span>
+                            <span>{formatNumber(Math.abs(token.priceChange))}%</span>
                           </div>
                         </div>
                       </div>
@@ -223,7 +230,7 @@ export default function WalletPage() {
                       {/* Balance Column */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-sm">{token.value.toFixed(2)}</div>
+                          <div className="text-sm">{formatNumber(token.value)}</div>
                           <div className="text-xs text-muted-foreground">
                             {token.balance.toLocaleString()} {token.symbol}
                           </div>
@@ -251,7 +258,7 @@ export default function WalletPage() {
 
                     {/* Balance */}
                     <div className="text-right">
-                      <div className="text-sm font-medium">{token.value.toFixed(2)}</div>
+                      <div className="text-sm font-medium">{formatNumber(token.value)}</div>
                       <div className="text-xs text-muted-foreground">
                         {token.balance.toLocaleString()} {token.symbol}
                       </div>

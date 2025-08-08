@@ -33,7 +33,7 @@ export default function LoadingScreen() {
   if (!isLoading) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
+    <div className="fixed inset-0 z-100 bg-[#000000] flex items-center justify-center">
       <div className="text-center space-y-6">
         {/* Logo/Icon */}
         <div className="relative">
