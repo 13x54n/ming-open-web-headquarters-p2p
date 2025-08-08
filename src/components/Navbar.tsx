@@ -193,6 +193,14 @@ export default function P2PNavbar() {
               </DropdownMenu>
             </div>
 
+            {/* Right side - Mobile */}
+            <div className="md:hidden flex items-center space-x-3">
+              <Button variant="ghost" onClick={handleLogout} className="relative cursor-pointer hover:bg-muted/20 px-3 py-2">
+                <LogOut className="h-4 w-4 text-muted-foreground mr-1" />
+                <span className="text-sm">Logout</span>
+              </Button>
+            </div>
+
           </div>
         </div>
       </nav>
@@ -203,16 +211,16 @@ export default function P2PNavbar() {
           <Link href="/" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
             <Home className="h-6 w-6 text-muted-foreground" />
           </Link>
-          
+
           <Link href="/wallet" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
             <Wallet className="h-6 w-6 text-muted-foreground" />
           </Link>
-          
+
           <Link href="/notifications" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors relative">
             <Bell className="h-6 w-6 text-muted-foreground" />
             <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-xs bg-red-500 text-white">3</Badge>
           </Link>
-          
+
           <Link href="/settings" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
             <Settings className="h-6 w-6 text-muted-foreground" />
           </Link>

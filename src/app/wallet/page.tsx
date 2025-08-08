@@ -35,8 +35,7 @@ export default function WalletPage() {
   const [copied, setCopied] = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [selectedChain, setSelectedChain] = useState('ethereum');
-  const [creatingWallet, setCreatingWallet] = useState(false);
-  const { userData, loading, error, refreshUserData } = useBackendUser();
+  const { userData, loading} = useBackendUser();
   const { toast } = useToast();
 
   // Helper function to format numbers without unnecessary decimal zeros
