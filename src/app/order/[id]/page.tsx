@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, AlertCircle, CheckCircle, Info, MessageCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, MessageCircle } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { PAYMENT_METHODS } from '@/lib/constants';
 import { fetchUserData } from '@/lib/utils';
@@ -39,14 +39,7 @@ interface UserData {
   totalOrders?: number;
 }
 
-interface PaymentMethodInfo {
-  name: string;
-  description: string;
-  acceptedFormats: string[];
-  processingTime: string;
-  fees: string;
-  instructions: string[];
-}
+ 
 
 interface Trade {
   _id: string;
@@ -84,7 +77,6 @@ export default function OrderDetailPage() {
   const [tradeAmount, setTradeAmount] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedPaymentInfo, setSelectedPaymentInfo] = useState<PaymentMethodInfo | null>(null);
   
   // Trade management state
   const [currentTrade, setCurrentTrade] = useState<Trade | null>(null);
@@ -94,74 +86,7 @@ export default function OrderDetailPage() {
   
 
 
-  // Payment method information
-  const paymentMethodInfo: Record<string, PaymentMethodInfo> = {
-    'eSewa': {
-      name: 'eSewa',
-      description: 'Sample: 9841234567 or user@example.com',
-      acceptedFormats: ['Mobile Number', 'Email Address', 'eSewa ID'],
-      processingTime: 'Instant',
-      fees: 'Free for wallet transfers',
-      instructions: [
-        'Enter the recipient\'s mobile number or email',
-        'Ensure the number/email is registered with eSewa',
-        'Payment will be processed instantly',
-        'Keep transaction ID for verification'
-      ]
-    },
-    'Khalti': {
-      name: 'Khalti',
-      description: 'Sample: 9841234567 or khalti123',
-      acceptedFormats: ['Mobile Number', 'Khalti ID'],
-      processingTime: 'Instant',
-      fees: 'Free for wallet transfers',
-      instructions: [
-        'Enter the recipient\'s mobile number',
-        'Number must be registered with Khalti',
-        'Payment will be processed instantly',
-        'Save transaction reference number'
-      ]
-    },
-    'Bank Transfer': {
-      name: 'Bank Transfer',
-      description: 'Sample: 1234567890, IFSC: NABL0001234',
-      acceptedFormats: ['Bank Account Number', 'IFSC Code'],
-      processingTime: '1-2 business days',
-      fees: 'Varies by bank (usually ₹10-50)',
-      instructions: [
-        'Provide your bank account number',
-        'Include IFSC code for the bank branch',
-        'Transfer may take 1-2 business days',
-        'Keep bank transaction receipt'
-      ]
-    },
-    'UPI': {
-      name: 'UPI',
-      description: 'Sample: user@upi or 9841234567@okicici',
-      acceptedFormats: ['UPI ID', 'Phone Number', 'QR Code'],
-      processingTime: 'Instant',
-      fees: 'Free',
-      instructions: [
-        'Share your UPI ID or phone number',
-        'Payment will be instant',
-        'No additional fees charged',
-        'Keep UPI transaction reference'
-      ]
-    },
-    'PayPal': {
-      name: 'PayPal',
-      description: 'Sample: user@paypal.com or paypal.me/username',
-      acceptedFormats: ['Email Address', 'PayPal.me Link'],
-      processingTime: 'Instant to 24 hours',
-      fees: '2.9% + fixed fee',
-      instructions: [
-        'Provide your PayPal email address',
-        'International transfers may take longer',
-        'Fees apply based on amount',
-        'Keep PayPal transaction ID'
-      ]
-    }
-  };
+  // Removed verbose payment method info. Keep UI simple and leverage order.paymentMethods
 
   const orderId = params.id as string;
 
@@ -196,6 +121,9 @@ export default function OrderDetailPage() {
 
         const orderData = result.data.order;
         setOrder(orderData);
+        if (orderData?.paymentMethods?.length) {
+          setSelectedPaymentMethod(orderData.paymentMethods[0]);
+        }
 
         // Fetch user data for the order creator
         if (orderData.uid) {
@@ -222,6 +150,9 @@ export default function OrderDetailPage() {
         };
 
         setOrder(fallbackOrder);
+        if (fallbackOrder?.paymentMethods?.length) {
+          setSelectedPaymentMethod(fallbackOrder.paymentMethods[0]);
+        }
 
         // Fetch user data for the order creator
         if (fallbackOrder.uid) {
@@ -273,12 +204,7 @@ export default function OrderDetailPage() {
     return isNaN(amount) ? 0 : amount * order.price;
   };
 
-  const handlePaymentMethodClick = (methodName: string) => {
-    const info = paymentMethodInfo[methodName];
-    if (info) {
-      setSelectedPaymentInfo(info);
-    }
-  };
+  // Removed unused payment method click handler
 
   const handleMarkComplete = async () => {
     if (!currentTrade) return;
@@ -702,81 +628,16 @@ export default function OrderDetailPage() {
                   <div className="flex flex-wrap gap-2 mt-2">
                     {order.paymentMethods.map((method) => {
                       const paymentMethod = PAYMENT_METHODS.find(pm => pm.name === method);
-                      const hasInfo = paymentMethodInfo[method];
                       return (
                         <div key={method} className="flex items-center gap-1">
-                          <Badge variant="outline" className="flex items-center gap-2">
+                          <Badge
+                            onClick={() => setSelectedPaymentMethod(method)}
+                            variant={selectedPaymentMethod === method ? 'default' : 'outline'}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
                             <div className={`w-2 h-2 ${paymentMethod?.color || 'bg-gray-500'} rounded-full`}></div>
                             {method}
                           </Badge>
-                          {hasInfo && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 hover:bg-muted"
-                                  onClick={() => handlePaymentMethodClick(method)}
-                                >
-                                  <Info className="w-3 h-3" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-md">
-                                <DialogHeader>
-                                  <DialogTitle className="flex items-center gap-2">
-                                    <div className={`w-3 h-3 ${paymentMethod?.color || 'bg-gray-500'} rounded-full`}></div>
-                                    {selectedPaymentInfo?.name}
-                                  </DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label className="text-sm font-medium">Description</Label>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {selectedPaymentInfo?.description}
-                                    </p>
-                                  </div>
-                                  
-                                  <div>
-                                    <Label className="text-sm font-medium">Accepted Formats</Label>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {selectedPaymentInfo?.acceptedFormats.map((format, index) => (
-                                        <Badge key={index} variant="secondary" className="text-xs">
-                                          {format}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <Label className="text-sm font-medium">Processing Time</Label>
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        {selectedPaymentInfo?.processingTime}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium">Fees</Label>
-                                      <p className="text-sm text-muted-foreground mt-1">
-                                        {selectedPaymentInfo?.fees}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  
-                                  <div>
-                                    <Label className="text-sm font-medium">Instructions</Label>
-                                    <ul className="text-sm text-muted-foreground mt-1 space-y-1">
-                                      {selectedPaymentInfo?.instructions.map((instruction, index) => (
-                                        <li key={index} className="flex items-start gap-2">
-                                          <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                                          {instruction}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          )}
                         </div>
                       );
                     })}
@@ -842,24 +703,6 @@ export default function OrderDetailPage() {
                         <Label className="text-sm text-muted-foreground">Total Value (NPR)</Label>
                         <div className="text-xl font-bold">
                           NPR {formatNumber(calculateTotalValue())}
-                        </div>
-                      </div>
-
-                      {/* Payment Method Selection */}
-                      <div>
-                        <Label>Payment Method</Label>
-                        <div className="grid grid-cols-1 gap-2 mt-2">
-                          {order.paymentMethods.map((method) => (
-                            <Button
-                              key={method}
-                              variant={selectedPaymentMethod === method ? "default" : "outline"}
-                              onClick={() => setSelectedPaymentMethod(method)}
-                              className="justify-start"
-                            >
-                              <div className={`w-3 h-3 ${PAYMENT_METHODS.find(pm => pm.name === method)?.color || 'bg-gray-500'} rounded-full mr-3`}></div>
-                              {method}
-                            </Button>
-                          ))}
                         </div>
                       </div>
 

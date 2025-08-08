@@ -198,27 +198,23 @@ export default function P2PNavbar() {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border">
-        <div className="flex items-center justify-around px-4 py-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 py-1 bg-black border-t border-border">
+        <div className="flex items-center justify-around px-6 py-2">
           <Link href="/" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-            <Home className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Home</span>
+            <Home className="h-6 w-6 text-muted-foreground" />
           </Link>
           
           <Link href="/wallet" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-            <Wallet className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Wallet</span>
+            <Wallet className="h-6 w-6 text-muted-foreground" />
           </Link>
           
           <Link href="/notifications" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors relative">
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Notifications</span>
+            <Bell className="h-6 w-6 text-muted-foreground" />
             <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-xs bg-red-500 text-white">3</Badge>
           </Link>
           
           <Link href="/settings" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-            <Settings className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Settings</span>
+            <Settings className="h-6 w-6 text-muted-foreground" />
           </Link>
         </div>
       </div>

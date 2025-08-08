@@ -327,7 +327,7 @@ export default function DashboardPage() {
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder={averagePrice > 0 ? `Avg: रु${formatNumber(averagePrice)} per ${selectedCrypto}` : `Enter price per ${selectedCrypto}`}
+                    placeholder={averagePrice > 0 ? `Avg: रु ${formatNumber(averagePrice)} per ${selectedCrypto}` : `Enter price per ${selectedCrypto}`}
                     value={transactionAmount}
                     onChange={(e) => setTransactionAmount(e.target.value)}
                     className={`bg-background border-border text-foreground placeholder-muted-foreground pr-20 ${transactionAmount && !isNaN(parseFloat(transactionAmount)) ? 'border-green-500' : ''
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                 {paymentMethod !== 'All payment methods' && ` with ${paymentMethod}`}
                 {transactionAmount && !isNaN(parseFloat(transactionAmount)) && ` around ${formatNumber(parseFloat(transactionAmount))} per token`}
 
-                {averagePrice > 0 && ` • Avg Price: ${formatNumber(averagePrice)}`}
+                {averagePrice > 0 && ` • Avg Price: रु ${formatNumber(averagePrice)}`}
               </div>
 
               {/* Column Headers */}
