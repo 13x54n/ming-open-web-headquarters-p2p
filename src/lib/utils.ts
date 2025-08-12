@@ -223,3 +223,11 @@ export async function fetchOrders(params: {
     throw error;
   }
 }
+
+// Utility function to shorten wallet addresses
+export function shortenAddress(address: string, startLength: number = 6, endLength: number = 4): string {
+  if (!address || address.length <= startLength + endLength) {
+    return address;
+  }
+  return `${address.slice(0, startLength)}...${address.slice(-endLength)}`;
+}
