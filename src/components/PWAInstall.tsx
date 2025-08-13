@@ -49,9 +49,9 @@ export default function PWAInstall() {
     <div className="fixed bottom-4 left-4 right-4 z-50 bg-background border border-border rounded-lg p-4 shadow-lg">
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <h3 className="font-semibold text-foreground">Install P2P Trading App</h3>
+          <h3 className="font-semibold text-foreground">Ming HQ</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Install our app for a better trading experience
+            Install our app for a better experience.
           </p>
         </div>
         <div className="flex items-center gap-2 ml-4">

@@ -51,20 +51,19 @@ export default function LoadingScreen() {
             />
             <span className="text-2xl font-bold text-white hidden">M</span>
           </div>
-          <div className="absolute inset-0 w-20 h-20 border-4 border-blue-500/30 rounded-2xl animate-ping"></div>
         </div>
 
         {/* App Name */}
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">Ming HQ</h1>
-          <p className="text-muted-foreground">Peer-to-peer escrow for people</p>
+          <p className="text-muted-foreground">Peer-to-peer marketplace for people.</p>
         </div>
 
         {/* Progress Bar */}
         <div className="w-64 mx-auto space-y-2">
           <div className="w-full bg-muted rounded-full h-2">
             <div 
-              className="bg-gradient-to-r from-[#27ae60] to-[#2ecc71] h-2 rounded-full transition-all duration-300 ease-out"
+              className="bg-gradient-to-r from-[#45af71] to-[#1cd569] h-2 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             ></div>
           </div>

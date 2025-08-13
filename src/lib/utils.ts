@@ -41,7 +41,7 @@ export async function sendUserToBackend(uid: string, email: string | null, displ
       photoURL,
     };
 
-  
+
 
     const response = await fetch(`${BACKEND_URL}/api/users/google`, {
       method: 'POST',
@@ -129,7 +129,7 @@ export async function createOrder(orderData: {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new Error('Unable to connect to backend server. Please check if the server is running on port 4000.');
     }
-    
+
     throw error;
   }
 }
@@ -146,7 +146,7 @@ export async function fetchUserData(uid: string): Promise<UserData | null> {
 
     if (response.ok) {
       const data = await response.json();
-      
+
       if (data.success) {
         return {
           uid: data.data.uid,
@@ -158,7 +158,7 @@ export async function fetchUserData(uid: string): Promise<UserData | null> {
         };
       }
     }
-    
+
     // Fallback: return basic info
     return {
       uid,
@@ -192,7 +192,7 @@ export async function fetchOrders(params: {
 }): Promise<OrdersResponse> {
   try {
     const searchParams = new URLSearchParams();
-    
+
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.type) searchParams.append('type', params.type);
@@ -219,7 +219,7 @@ export async function fetchOrders(params: {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new Error('Unable to connect to backend server. Please check if the server is running on port 4000.');
     }
-    
+
     throw error;
   }
 }
@@ -231,3 +231,4 @@ export function shortenAddress(address: string, startLength: number = 6, endLeng
   }
   return `${address.slice(0, startLength)}...${address.slice(-endLength)}`;
 }
+

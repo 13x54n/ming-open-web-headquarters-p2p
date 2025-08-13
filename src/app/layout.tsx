@@ -8,7 +8,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster as HotToaster } from "react-hot-toast"
-import { registerServiceWorker } from "@/lib/sw-register"
+import ServiceWorkerRegistration from "@/lib/ServiceWorkerRegistration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,7 +48,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#3b82f6",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -56,11 +56,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ServiceWorkerRegistration />
         <LoadingScreen />
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
@@ -127,18 +129,18 @@ export default function RootLayout({
             `,
           }}
         />
-      </body>
-      <script async src="https://www.googletagmanager.com/gtag/js?id=G-ER3MXWXLXD"></script>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-ER3MXWXLXD"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-ER3MXWXLXD');
           `,
-        }}
-      />
+          }}
+        />
+      </body>
     </html>
   );
 }
