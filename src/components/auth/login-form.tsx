@@ -15,7 +15,7 @@ export default function LoginForm() {
       setLoading(true);
       await signInWithGoogle();
     } catch (error) {
-      // Handle sign in error
+      console.error('Error signing in with Google:', error);
     } finally {
       setLoading(false);
     }
@@ -23,7 +23,6 @@ export default function LoginForm() {
 
   return (
     <Card className="w-full max-w-md mx-auto">
-
       <CardContent className="space-y-3">
         <CardDescription className="text-center">
           New users auto-registered via Google sign-in.

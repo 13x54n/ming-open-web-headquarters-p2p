@@ -38,8 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
 
-
-
   async function signInWithGoogle() {
     try {
       const provider = new GoogleAuthProvider();
@@ -48,10 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider.addScope('email');
       
       const result = await signInWithPopup(auth, provider);
-      
       // User data will be sent to backend in onAuthStateChanged callback
       // This prevents duplicate calls
-      
     } catch (error) {
       throw error;
     }

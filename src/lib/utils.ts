@@ -41,8 +41,6 @@ export async function sendUserToBackend(uid: string, email: string | null, displ
       photoURL,
     };
 
-
-
     const response = await fetch(`${BACKEND_URL}/api/users/google`, {
       method: 'POST',
       headers: {
@@ -86,12 +84,7 @@ export async function logoutFromBackend(uid: string) {
 
       throw new Error(`Backend logout error: ${response.status} ${response.statusText}`);
     }
-
-    const data = await response.json();
-
-    return data;
   } catch (error) {
-
     // Don't throw error here to avoid breaking the logout flow
     // The user can still logout from Firebase even if backend fails
     return null;
@@ -146,6 +139,7 @@ export async function fetchUserData(uid: string): Promise<UserData | null> {
 
     if (response.ok) {
       const data = await response.json();
+      console.log('data', data);
 
       if (data.success) {
         return {
