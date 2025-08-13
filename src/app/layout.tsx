@@ -72,7 +72,7 @@ export default function RootLayout({
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
-        <HotToaster 
+        <HotToaster
           position="top-right"
           toastOptions={{
             duration: 4000,
@@ -128,6 +128,15 @@ export default function RootLayout({
           }}
         />
       </body>
+      <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-ER3MXWXLXD"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-ER3MXWXLXD');
+      </script>
     </html>
   );
 }
