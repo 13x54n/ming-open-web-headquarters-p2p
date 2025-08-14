@@ -5,7 +5,6 @@ import { fetchUserData } from '@/lib/utils';
 interface WalletInfo {
   walletId: string;
   walletAddress: string;
-  blockchain: string;
 }
 
 interface BackendUserData {

@@ -9,6 +9,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster as HotToaster } from "react-hot-toast"
 import ServiceWorkerRegistration from "@/lib/ServiceWorkerRegistration";
+import { TokenBalanceProvider } from "@/contexts/TokenBalanceContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,12 +66,14 @@ export default function RootLayout({
         <ServiceWorkerRegistration />
         <LoadingScreen />
         <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <NavbarWrapper />
-            <main className="flex-1">
-              {children}
-            </main>
-          </div>
+          <TokenBalanceProvider>
+            <div className="min-h-screen flex flex-col">
+              <NavbarWrapper />
+              <main className="flex-1">
+                {children}
+              </main>
+            </div>
+          </TokenBalanceProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
@@ -141,6 +144,6 @@ export default function RootLayout({
           }}
         />
       </body>
-    </html>
+    </html >
   );
 }

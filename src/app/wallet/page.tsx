@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 import {
@@ -46,6 +46,25 @@ export default function WalletPage() {
     const fixed = num.toFixed(decimals);
     return fixed.replace(/\.?0+$/, '');
   };
+
+  // call that api to get the balance
+  const getBalance = async () => {
+    if (!userData?.uid) {
+      console.log('No userData.uid available');
+      return;
+    }
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/users/uid/${userData.uid}/balance`, {
+      method: 'GET',
+    });
+    const data = await response.json();
+    console.log('Balance response:', data);
+  };
+  
+  useEffect(() => {
+    if (userData?.uid) {
+      getBalance();
+    }
+  }, [userData?.uid]);
 
   const tokens = [
     {
@@ -219,6 +238,8 @@ export default function WalletPage() {
                   <span className="hidden sm:inline">Transfer</span>
                   <span className="sm:hidden">Transfer</span>
                 </Button>
+
+
               </div>
             </div>
 
