@@ -12,7 +12,6 @@ import {
   ArrowRightLeft,
   Copy,
   Check,
-  X,
 } from 'lucide-react';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -30,6 +29,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useTokenBalance } from '@/contexts/TokenBalanceContext';
 
 export default function WalletPage() {
   const [activeTab, setActiveTab] = useState('assets');
@@ -39,7 +39,8 @@ export default function WalletPage() {
   const [depositMethod, setDepositMethod] = useState<'ming' | 'crypto'>('ming');
   const { userData, loading } = useBackendUser();
   const { toast } = useToast();
-
+  const { tokenBalances, totalPortfolioValue, refreshBalances, isLoading: balancesLoading } = useTokenBalance();
+  
   // Helper function to format numbers without unnecessary decimal zeros
   const formatNumber = (num: number, decimals: number = 2) => {
     if (num === null || num === undefined || isNaN(num)) return '0';
@@ -47,80 +48,30 @@ export default function WalletPage() {
     return fixed.replace(/\.?0+$/, '');
   };
 
-  // call that api to get the balance
-  const getBalance = async () => {
-    if (!userData?.uid) {
-      console.log('No userData.uid available');
-      return;
-    }
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/users/uid/${userData.uid}/balance`, {
-      method: 'GET',
-    });
-    const data = await response.json();
-    console.log('Balance response:', data);
-  };
+  // Use real token balances from context instead of hardcoded data
+  const tokens = tokenBalances || [];
   
-  useEffect(() => {
-    if (userData?.uid) {
-      getBalance();
-    }
-  }, [userData?.uid]);
+  // Use real total portfolio value from context with fallback
+  const totalValue = totalPortfolioValue || 0;
+  const dailyChange = 0.10; // TODO: Calculate from price changes
+  const dailyChangePercent = 1.69; // TODO: Calculate from price changes
 
-  const tokens = [
-    {
-      id: 1,
-      symbol: 'ETH',
-      name: 'Ethereum',
-      url: 'https://ik.imagekit.io/lexy/Ming/tokens/ethereum-eth.webp?updatedAt=1754373033878',
-      portfolioPercent: 93.26,
-      price: 3657.29,
-      priceChange: 2.86,
-      balance: 0.0016,
-      value: 5.67,
-      isPositive: true
-    },
-    {
-      id: 2,
-      symbol: 'USDT',
-      name: 'Tether',
-      url: 'https://ik.imagekit.io/lexy/Ming/tokens/Tether-USDT-icon.webp?updatedAt=1754373237083',
-      portfolioPercent: 4.77,
-      price: 0.00000752,
-      priceChange: -16.74,
-      balance: 38300,
-      value: 0.29,
-      isPositive: false
-    },
-    {
-      id: 3,
-      symbol: 'BTC',
-      name: 'Bitcoin',
-      url: 'https://ik.imagekit.io/lexy/Ming/tokens/bitcoin_PNG38.webp?updatedAt=1754373429532',
-      portfolioPercent: 1.97,
-      price: 3657.29,
-      priceChange: 2.86,
-      balance: 0,
-      value: 0.12,
-      isPositive: true
-    },
-    {
-      id: 4,
-      symbol: 'STRK',
-      name: 'Starknet',
-      url: 'https://ik.imagekit.io/lexy/Ming/tokens/Starknet_STRK_Logo-3000x3000.webp',
-      portfolioPercent: 0.00,
-      price: 0.00000752,
-      priceChange: -16.74,
-      balance: 0,
-      value: 0.12,
-      isPositive: true
-    },
+  // Calculate total value from tokens if context doesn't provide it
+  const calculatedTotalValue = totalValue > 0 ? totalValue : tokens.reduce((sum, token) => sum + (token.value || 0), 0);
 
-  ];
+  // Validate token structure and filter out invalid tokens
+  const validTokens = tokens.filter(token => 
+    token && 
+    typeof token === 'object' && 
+    token.symbol && 
+    token.name && 
+    typeof token.balance === 'number' && 
+    typeof token.value === 'number'
+  );
 
-  const totalValue = 6.08;
-  const dailyChange = 0.10;
-  const dailyChangePercent = 1.69;
+  if (tokens.length > 0 && validTokens.length === 0) {
+    console.warn('Token validation failed. Sample token structure:', tokens[0]);
+  }
 
   // Helper function to copy wallet address to clipboard
   const copyToClipboard = async (text: string) => {
@@ -194,7 +145,7 @@ export default function WalletPage() {
               <div className="space-y-2">
                 <h1 className="text-lg sm:text-xl font-semibold text-white">Estimated Balance</h1>
                 <div className="flex items-center gap-2">
-                  <span className="text-3xl sm:text-4xl font-bold text-white">${formatNumber(totalValue)}</span>
+                  <span className="text-3xl sm:text-4xl font-bold text-white">${formatNumber(calculatedTotalValue)}</span>
                 </div>
                 <div className="flex items-center gap-1 text-green-500 text-sm">
                   <TrendingUp className="h-4 w-4" />
@@ -225,21 +176,6 @@ export default function WalletPage() {
                   <span className="hidden sm:inline">Withdraw</span>
                   <span className="sm:hidden">Withdraw</span>
                 </Button>
-
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
-                  onClick={() => {
-                    // TODO: Implement transfer functionality
-
-                  }}
-                >
-                  <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Transfer</span>
-                  <span className="sm:hidden">Transfer</span>
-                </Button>
-
-
               </div>
             </div>
 
@@ -276,81 +212,168 @@ export default function WalletPage() {
                   </div>
 
                   {/* Table Body */}
-                  <div className="divide-y divide-border">
-                    {tokens.map((token) => (
-                      <div key={token.id} className="grid grid-cols-4 gap-4 p-4 hover:bg-muted/20 transition-colors">
-                        {/* Token Column */}
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full overflow-hidden">
-                            <Image src={token.url} alt={token.symbol} width={26} height={26} className="w-full h-full object-cover" />
+                  {balancesLoading ? (
+                    <div className="divide-y divide-border">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="grid grid-cols-4 gap-4 p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-muted animate-pulse"></div>
+                            <div className="space-y-2">
+                              <div className="h-4 w-16 bg-muted rounded animate-pulse"></div>
+                              <div className="h-3 w-24 bg-muted rounded animate-pulse"></div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="h-4 w-12 bg-muted rounded animate-pulse"></div>
+                          <div className="space-y-2">
+                            <div className="h-4 w-20 bg-muted rounded animate-pulse"></div>
+                            <div className="h-3 w-16 bg-muted rounded animate-pulse"></div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-4 w-16 bg-muted rounded animate-pulse"></div>
+                            <div className="h-3 w-20 bg-muted rounded animate-pulse"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : validTokens.length > 0 ? (
+                    <div className="divide-y divide-border">
+                      {validTokens.map((token) => (
+                        <div key={token.id} className="grid grid-cols-4 gap-4 p-4 hover:bg-muted/20 transition-colors">
+                          {/* Token Column */}
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full overflow-hidden">
+                              <Image src={token.url} alt={token.symbol} width={26} height={26} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="font-medium">{token.symbol}</div>
+                                <div className="text-sm text-muted-foreground">{token.name}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Portfolio % Column */}
+                          <div className="flex items-center">
+                            <span className="text-sm">{formatNumber(token.portfolioPercent)}%</span>
+                          </div>
+
+                          {/* Price Column */}
+                          <div className="flex items-center">
                             <div>
-                              <div className="font-medium">{token.symbol}</div>
-                              <div className="text-sm text-muted-foreground">{token.name}</div>
+                              <div className="text-sm">${formatNumber(token.price)}</div>
+                              <div className={`flex items-center gap-1 text-xs ${token.isPositive ? 'text-green-500' : 'text-red-500'
+                                }`}>
+                                {token.isPositive ? (
+                                  <TrendingUp className="h-3 w-3" />
+                                ) : (
+                                  <TrendingDown className="h-3 w-3" />
+                                )}
+                                <span>{formatNumber(Math.abs(token.priceChange))}%</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Balance Column */}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm">${formatNumber(token.value)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatNumber(token.balance)} {token.symbol}
+                              </div>
                             </div>
                           </div>
                         </div>
-
-                        {/* Portfolio % Column */}
-                        <div className="flex items-center">
-                          <span className="text-sm">{formatNumber(token.portfolioPercent)}%</span>
-                        </div>
-
-                        {/* Price Column */}
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm">{token.price.toLocaleString()}</div>
-                            <div className={`flex items-center gap-1 text-xs ${token.isPositive ? 'text-green-500' : 'text-red-500'
-                              }`}>
-                              {token.isPositive ? (
-                                <TrendingUp className="h-3 w-3" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3" />
-                              )}
-                              <span>{formatNumber(Math.abs(token.priceChange))}%</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Balance Column */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm">${formatNumber(token.value)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {token.balance.toLocaleString()} {token.symbol}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <p>No tokens found</p>
+                      <p className="text-sm mt-2">Your token balances will appear here</p>
+                      {totalValue === 0 && (
+                        <p className="text-xs mt-2 text-orange-500">
+                          If you expect to see tokens, try refreshing or check your wallet connection
+                        </p>
+                      )}
+                      {tokens.length > 0 && validTokens.length === 0 && (
+                        <p className="text-xs mt-2 text-red-500">
+                          Token data structure issue detected. Check console for details.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Mobile Token List */}
                 <div className="sm:hidden space-y-3">
-                  {tokens.map((token) => (
-                    <div key={`mobile-${token.id}`} className="flex items-center justify-between p-4 bg-card border border-border rounded-lg">
-                      {/* Token Info */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden">
-                          <Image src={token.url} alt={token.symbol} width={40} height={40} className="w-full h-full object-cover" />
+                  {balancesLoading ? (
+                    [1, 2, 3].map((i) => (
+                      <div key={`mobile-skeleton-${i}`} className="flex items-center justify-between p-4 bg-card border border-border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-muted animate-pulse"></div>
+                          <div className="space-y-2">
+                            <div className="h-4 w-16 bg-muted rounded animate-pulse"></div>
+                            <div className="h-3 w-20 bg-muted rounded animate-pulse"></div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{token.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{token.name}</div>
+                        <div className="space-y-2">
+                          <div className="h-4 w-16 bg-muted rounded animate-pulse"></div>
+                          <div className="h-3 w-20 bg-muted rounded animate-pulse"></div>
                         </div>
                       </div>
+                    ))
+                  ) : validTokens.length > 0 ? (
+                    validTokens.map((token) => (
+                      <div key={`mobile-${token.id}`} className="flex items-center justify-between p-4 bg-card border border-border rounded-lg">
+                        {/* Token Info */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full overflow-hidden">
+                            <Image src={token.url} alt={token.symbol} width={40} height={40} className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm">{token.symbol}</div>
+                            <div className="text-xs text-muted-foreground">{token.name}</div>
+                            {token.blockchain.includes(',') && (
+                              <div className="text-xs text-blue-500">
+                                {token.blockchain.split(', ').map(chain => 
+                                  chain.charAt(0).toUpperCase() + chain.slice(1)
+                                ).join(' + ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
 
-                      {/* Balance */}
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{formatNumber(token.value)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {token.balance.toLocaleString()} {token.symbol}
+                        {/* Balance */}
+                        <div className="text-right">
+                          <div className="text-sm font-medium">${formatNumber(token.value)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatNumber(token.balance)} {token.symbol}
+                          </div>
+                          {token.chainBalances && Object.keys(token.chainBalances).length > 1 && (
+                            <div className="text-xs text-blue-500">
+                              {Object.entries(token.chainBalances).map(([chain, balance]) => 
+                                `${chain.charAt(0).toUpperCase() + chain.slice(1)}: ${formatNumber(balance)}`
+                              ).join(' | ')}
+                            </div>
+                          )}
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-muted-foreground">
+                      <p>No tokens found</p>
+                      <p className="text-sm mt-2">Your token balances will appear here</p>
+                      {totalValue === 0 && (
+                        <p className="text-xs mt-2 text-orange-500">
+                          If you expect to see tokens, try refreshing or check your wallet connection
+                        </p>
+                      )}
+                      {tokens.length > 0 && validTokens.length === 0 && (
+                        <p className="text-xs mt-2 text-red-500">
+                          Token data structure issue detected. Check console for details.
+                        </p>
+                      )}
                     </div>
-                  ))}
+                  )}
                 </div>
               </>
             )}

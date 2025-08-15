@@ -22,27 +22,28 @@ export const BLOCKCHAIN_MAPPING = {
 // Helper functions
 const getTokenIconUrl = (symbol: string): string => {
   const symbolLower = symbol.toLowerCase();
-  
+
   // Map common token symbols to their icon URLs
   if (symbolLower.includes('eth')) {
     return 'https://ik.imagekit.io/lexy/Ming/tokens/ethereum-eth.webp?updatedAt=1754373033878';
-  } else if (symbolLower.includes('matic') || symbolLower.includes('polygon')) {
-    return 'https://ik.imagekit.io/lexy/Ming/tokens/Tether-USDT-icon.webp?updatedAt=1754373237083';
+  } else if (symbolLower.includes('matic') || symbolLower.includes('pol-amoy')) {
+    return 'https://ik.imagekit.io/lexy/Ming/tokens/polygon-matic-logo-png_seeklogo-444501.webp?updatedAt=1754949573578';
   } else if (symbolLower.includes('arb') || symbolLower.includes('arbitrum')) {
-    return 'https://ik.imagekit.io/lexy/Ming/tokens/bitcoin_PNG38.webp?updatedAt=1754373429532';
+    return 'https://ik.imagekit.io/lexy/Ming/tokens/arb_fba92b25bc.webp?updatedAt=1755281918999';
   } else if (symbolLower.includes('usdc')) {
-    return 'https://ik.imagekit.io/lexy/Ming/tokens/Tether-USDT-icon.webp?updatedAt=1754373237083';
+    return 'https://ik.imagekit.io/lexy/Ming/tokens/Circle_USDC_Logo.webp?updatedAt=1754946527294';
   } else if (symbolLower.includes('usdt')) {
     return 'https://ik.imagekit.io/lexy/Ming/tokens/Tether-USDT-icon.webp?updatedAt=1754373237083';
+  } else if (symbolLower.includes('btc')) {
+    return 'https://ik.imagekit.io/lexy/Ming/tokens/bitcoin_PNG38.webp?updatedAt=1754373429532';
   }
-  
-  // Default fallback
+
   return 'https://ik.imagekit.io/lexy/Ming/tokens/bitcoin_PNG38.webp?updatedAt=1754373429532';
 };
 
 const getTokenPrice = (symbol: string): number => {
   const symbolLower = symbol.toLowerCase();
-  
+
   // Map token symbols to their prices
   if (symbolLower.includes('eth')) {
     return TOKEN_PRICES.ETH;
@@ -53,7 +54,7 @@ const getTokenPrice = (symbol: string): number => {
   } else if (symbolLower.includes('usdc') || symbolLower.includes('usdt')) {
     return TOKEN_PRICES.USDC;
   }
-  
+
   // Default fallback price
   return 1.00;
 };
@@ -98,26 +99,27 @@ interface ProcessedToken {
   isNative: boolean;
   tokenAddress?: string;
   standard?: string;
+  chainBalances?: { [chain: string]: number }; // Store individual chain balances
 }
 
 interface TokenBalanceContextType {
   // Real-time data
   totalPortfolioValue: number;
   tokenBalances: ProcessedToken[];
-  
+
   // Raw balance data
   chainBalances: BackendBalances | null;
-  
+
   // Calculated values
   ethereumBalance: number;
   polygonBalance: number;
   arbitrumBalance: number;
-  
+
   // Status
   hasBalances: boolean;
   isLoading: boolean;
   pricesLoading: boolean;
-  
+
   // Utility functions
   getTokenByBlockchain: (blockchain: string) => ProcessedToken | null;
   getBalanceBySymbol: (symbol: string) => number;
@@ -136,20 +138,17 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
   // Fetch balance data from backend
   const fetchBalances = useCallback(async () => {
     if (!userData?.uid) return;
-    
+
     try {
       setBalancesLoading(true);
-      console.log('Fetching balances for user:', userData.uid);
-      
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/users/uid/${userData.uid}/balance`);
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log('Backend balance response:', data);
-        
+
         if (data.success) {
           setChainBalances(data.data);
-          console.log('Chain balances set:', data.data);
         }
       } else {
         console.error('Backend response not ok:', response.status, response.statusText);
@@ -171,8 +170,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
 
   // Process balance data into tokens
   const tokenBalanceData = useMemo(() => {
-    console.log('Processing chain balances:', chainBalances);
-    
     if (!chainBalances) {
       return {
         totalPortfolioValue: 0,
@@ -204,7 +201,10 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           blockchain: 'ethereum',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
-          standard: backendToken.token.standard
+          standard: backendToken.token.standard,
+          chainBalances: {
+            ethereum: parseFloat(backendToken.amount)
+          }
         };
         tokens.push(token);
       });
@@ -227,7 +227,10 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           blockchain: 'polygon',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
-          standard: backendToken.token.standard
+          standard: backendToken.token.standard,
+          chainBalances: {
+            polygon: parseFloat(backendToken.amount)
+          }
         };
         tokens.push(token);
       });
@@ -250,34 +253,84 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           blockchain: 'arbitrum',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
-          standard: backendToken.token.standard
+          standard: backendToken.token.standard,
+          chainBalances: {
+            arbitrum: parseFloat(backendToken.amount)
+          }
         };
         tokens.push(token);
       });
     }
 
-    // Calculate values and percentages
+    // Aggregate tokens by symbol across blockchains
+    const aggregatedTokens = new Map<string, ProcessedToken>();
+    
     tokens.forEach(token => {
-      token.value = token.balance * token.price;
+      const key = token.symbol.toUpperCase();
+      const existingToken = aggregatedTokens.get(key);
+      
+      if (existingToken) {
+        // Combine balances and values for the same token symbol
+        existingToken.balance += token.balance;
+        existingToken.value += token.balance * token.price;
+        
+        // Update blockchain info to show multiple chains
+        if (existingToken.blockchain !== token.blockchain) {
+          existingToken.blockchain = `${existingToken.blockchain}, ${token.blockchain}`;
+        }
+        
+        // Combine chain balances
+        if (existingToken.chainBalances && token.chainBalances) {
+          existingToken.chainBalances = { ...existingToken.chainBalances, ...token.chainBalances };
+        }
+        
+        console.log(`Aggregating ${key}: Combined balance ${existingToken.balance}, value ${existingToken.value}, chains: ${existingToken.blockchain}`);
+        
+        // Use the first token's metadata (name, url, etc.) as primary
+        // Keep the first token's price (they should be the same for stablecoins)
+      } else {
+        // First occurrence of this token symbol
+        const newToken: ProcessedToken = {
+          ...token,
+          value: token.balance * token.price
+        };
+        aggregatedTokens.set(key, newToken);
+        console.log(`First occurrence of ${key}: Balance ${newToken.balance}, value ${newToken.value}, chain: ${newToken.blockchain}`);
+      }
+    });
+
+    // Convert aggregated tokens back to array
+    const finalTokens = Array.from(aggregatedTokens.values());
+    
+    console.log('Final aggregated tokens:', finalTokens.map(t => ({
+      symbol: t.symbol,
+      balance: t.balance,
+      value: t.value,
+      blockchain: t.blockchain,
+      chainBalances: t.chainBalances
+    })));
+
+    // Calculate values and percentages
+    finalTokens.forEach(token => {
       totalValue += token.value;
     });
 
     // Calculate portfolio percentages
     if (totalValue > 0) {
-      tokens.forEach(token => {
+      finalTokens.forEach(token => {
         token.portfolioPercent = (token.value / totalValue) * 100;
       });
     }
 
     const result = {
       totalPortfolioValue: totalValue,
-      tokenBalances: tokens,
-      ethereumBalance: tokens.filter(t => t.blockchain === 'ethereum').reduce((sum, t) => sum + t.value, 0),
-      polygonBalance: tokens.filter(t => t.blockchain === 'polygon').reduce((sum, t) => sum + t.value, 0),
-      arbitrumBalance: tokens.filter(t => t.blockchain === 'arbitrum').reduce((sum, t) => sum + t.value, 0),
-      hasBalances: tokens.length > 0
+      tokenBalances: finalTokens,
+      ethereumBalance: tokens.filter(t => t.blockchain === 'ethereum').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol)), 0),
+      polygonBalance: tokens.filter(t => t.blockchain === 'polygon').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol)), 0),
+      arbitrumBalance: tokens.filter(t => t.blockchain === 'arbitrum').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol)), 0),
+      hasBalances: finalTokens.length > 0
     };
-    
+
     console.log('Processed token data:', result);
     return result;
   }, [chainBalances]);
