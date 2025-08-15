@@ -233,7 +233,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           priceChange: backendToken.percentChange || 0, // Use percentChange from backend
           balance: parseFloat(backendToken.amount),
           value: 0, // Will calculate after balance
-          isPositive: (backendToken.percentChange || 0) >= 0, // Calculate based on percent change
+          isPositive: (backendToken.percentChange || 0) >= 0,
           blockchain: 'ethereum',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
@@ -243,10 +243,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           }
         };
         
-        if (backendToken.percentChange !== undefined) {
-          console.log(`ETH token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}%`);
-        }
-        
+        console.log(`ETH token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}, priceChange = ${token.priceChange}%`);
         tokens.push(token);
       });
     }
@@ -274,10 +271,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           }
         };
         
-        if (backendToken.percentChange !== undefined) {
-          console.log(`POL token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}%`);
-        }
-        
+        console.log(`POL token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}, priceChange = ${token.priceChange}%`);
         tokens.push(token);
       });
     }
@@ -305,10 +299,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           }
         };
         
-        if (backendToken.percentChange !== undefined) {
-          console.log(`ARB token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}%`);
-        }
-        
+        console.log(`ARB token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}, priceChange = ${token.priceChange}%`);
         tokens.push(token);
       });
     }
@@ -322,7 +313,9 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
       
       if (existingToken) {
         // Combine balances and values for the same token symbol
-        existingToken.balance += token.balance;
+        const oldBalance = existingToken.balance;
+        const newBalance = token.balance;
+        existingToken.balance += newBalance;
         existingToken.value += token.balance * token.price;
         
         // Update blockchain info to show multiple chains
@@ -336,10 +329,16 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
         }
         
         // For percentage change, use weighted average based on balance
-        if (token.balance > 0) {
-          const weight = token.balance / (existingToken.balance + token.balance);
-          existingToken.priceChange = (existingToken.priceChange * (1 - weight)) + (token.priceChange * weight);
+        // Only combine if both tokens have valid percentage changes
+        if (token.balance > 0 && existingToken.priceChange !== undefined && token.priceChange !== undefined) {
+          const oldWeight = oldBalance / existingToken.balance;
+          const newWeight = newBalance / existingToken.balance;
+          existingToken.priceChange = (existingToken.priceChange * oldWeight) + (token.priceChange * newWeight);
+        } else if (token.priceChange !== undefined && existingToken.priceChange === undefined) {
+          // If existing token has no percentage change but new one does, use the new one
+          existingToken.priceChange = token.priceChange;
         }
+        // If existing token has percentage change but new one doesn't, keep existing
         
         console.log(`Aggregating ${key}: Combined balance ${existingToken.balance}, value ${existingToken.value}, chains: ${existingToken.blockchain}, priceChange: ${existingToken.priceChange}%`);
         

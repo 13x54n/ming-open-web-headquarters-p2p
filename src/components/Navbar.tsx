@@ -26,7 +26,7 @@ export default function P2PNavbar() {
   const { currentUser, logout } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const { totalPortfolioValue, refreshBalances, isLoading: balancesLoading } = useTokenBalance()
+  const { totalPortfolioValue, refreshBalances, isLoading: balancesLoading, totalPercentageChange } = useTokenBalance()
 
   const handleLogout = async () => {
     try {
@@ -84,8 +84,10 @@ export default function P2PNavbar() {
               <Link href="/wallet" className="flex items-center space-x-2 bg-muted/20 hover:bg-muted/30 px-4 py-2 rounded-lg transition-colors cursor-pointer border border-border">
                 <Wallet className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-white">${balancesLoading ? 'Loading...' : formatNumber(totalPortfolioValue)}</span>
-                <div className="flex items-center gap-1 text-green-500 text-xs">
-                  <span>+1.69%</span>
+                <div className={`flex items-center gap-1 text-xs ${totalPercentageChange > 0 ? 'text-green-500' : totalPercentageChange < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                  <span>
+                    {totalPercentageChange > 0 ? '+' : ''}{formatNumber(totalPercentageChange, 2)}%
+                  </span>
                 </div>
               </Link>
 
