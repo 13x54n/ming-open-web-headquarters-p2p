@@ -41,7 +41,7 @@ export default function WalletPage() {
   const [depositMethod, setDepositMethod] = useState<'ming' | 'crypto'>('ming');
   const { userData, loading } = useBackendUser();
   const { toast } = useToast();
-  const { tokenBalances, totalPortfolioValue, refreshBalances, isLoading: balancesLoading } = useTokenBalance();
+  const { tokenBalances, totalPortfolioValue, refreshBalances, isLoading: balancesLoading, totalPercentageChange } = useTokenBalance();
   
   // Helper function to format numbers without unnecessary decimal zeros
   const formatNumber = (num: number, decimals: number = 2) => {
@@ -56,7 +56,7 @@ export default function WalletPage() {
   // Use real total portfolio value from context with fallback
   const totalValue = totalPortfolioValue || 0;
   const dailyChange = 0.10; // TODO: Calculate from price changes
-  const dailyChangePercent = 1.69; // TODO: Calculate from price changes
+  const dailyChangePercent = totalPercentageChange || 0; // Use real percentage change from context
 
   // Calculate total value from tokens if context doesn't provide it
   const calculatedTotalValue = totalValue > 0 ? totalValue : tokens.reduce((sum, token) => sum + (token.value || 0), 0);
@@ -149,9 +149,17 @@ export default function WalletPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-3xl sm:text-4xl font-bold text-white">${formatNumber(calculatedTotalValue)}</span>
                 </div>
-                <div className="flex items-center gap-1 text-green-500 text-sm">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>+{formatNumber(dailyChange)} (+{formatNumber(dailyChangePercent)}%)</span>
+                <div className={`flex items-center gap-1 text-sm ${dailyChangePercent > 0 ? 'text-green-500' : dailyChangePercent < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                  {dailyChangePercent > 0 ? (
+                    <TrendingUp className="h-4 w-4" />
+                  ) : dailyChangePercent < 0 ? (
+                    <TrendingDown className="h-4 w-4" />
+                  ) : (
+                    <div className="h-4 w-4" />
+                  )}
+                  <span>
+                    {dailyChangePercent > 0 ? '+' : ''}{formatNumber(dailyChangePercent)}%
+                  </span>
                 </div>
               </div>
 
@@ -360,6 +368,14 @@ export default function WalletPage() {
                           <div className="text-sm font-medium">${formatNumber(token.value)}</div>
                           <div className="text-xs text-muted-foreground">
                             {formatNumber(token.balance)} {token.symbol}
+                          </div>
+                          <div className={`flex items-center gap-1 text-xs ${token.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                            {token.isPositive ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            <span>{formatNumber(Math.abs(token.priceChange))}%</span>
                           </div>
                           {token.chainBalances && Object.keys(token.chainBalances).length > 1 && (
                             <div className="text-xs text-blue-500">

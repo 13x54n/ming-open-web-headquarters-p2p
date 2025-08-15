@@ -3,21 +3,12 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
 import { useBackendUser } from '@/hooks/useBackendUser';
 
-// Token price constants (fallback values)
-export const TOKEN_PRICES = {
-  ETH: 3657.29,
-  MATIC: 0.85,
-  ARB: 1.25,
-  USDT: 1.00,
-  USDC: 1.00
-} as const;
-
-// Blockchain mapping to match backend
-export const BLOCKCHAIN_MAPPING = {
-  'ETH-SEPOLIA': { symbol: 'ETH', name: 'Ethereum', price: TOKEN_PRICES.ETH },
-  'MATIC-AMOY': { symbol: 'MATIC', name: 'Polygon', price: TOKEN_PRICES.MATIC },
-  'ARB-SEPOLIA': { symbol: 'ARB', name: 'Arbitrum', price: TOKEN_PRICES.ARB }
-} as const;
+// Real-time token prices from backend
+interface BackendTokenPrices {
+  ethPrice: number;
+  maticPrice: number;
+  arbPrice: number;
+}
 
 // Helper functions
 const getTokenIconUrl = (symbol: string): string => {
@@ -41,18 +32,30 @@ const getTokenIconUrl = (symbol: string): string => {
   return 'https://ik.imagekit.io/lexy/Ming/tokens/bitcoin_PNG38.webp?updatedAt=1754373429532';
 };
 
-const getTokenPrice = (symbol: string): number => {
+const getTokenPrice = (symbol: string, backendPrices: BackendTokenPrices | null): number => {
   const symbolLower = symbol.toLowerCase();
 
-  // Map token symbols to their prices
-  if (symbolLower.includes('eth')) {
-    return TOKEN_PRICES.ETH;
-  } else if (symbolLower.includes('matic') || symbolLower.includes('polygon')) {
-    return TOKEN_PRICES.MATIC;
-  } else if (symbolLower.includes('arb') || symbolLower.includes('arbitrum')) {
-    return TOKEN_PRICES.ARB;
-  } else if (symbolLower.includes('usdc') || symbolLower.includes('usdt')) {
-    return TOKEN_PRICES.USDC;
+  // Use backend prices if available for ETH, POL (MATIC), and ARB
+  if (backendPrices) {
+    if (symbolLower.includes('eth')) {
+      return backendPrices.ethPrice;
+    } else if (symbolLower.includes('matic') || symbolLower.includes('polygon') || symbolLower.includes('pol')) {
+      return backendPrices.maticPrice;
+    } else if (symbolLower.includes('arb') || symbolLower.includes('arbitrum')) {
+      return backendPrices.arbPrice;
+    }
+  } else {
+    // If no backend prices available, return 0 for ETH, POL, and ARB to prevent incorrect calculations
+    if (symbolLower.includes('eth') || symbolLower.includes('matic') || symbolLower.includes('polygon') || symbolLower.includes('pol') || symbolLower.includes('arb') || symbolLower.includes('arbitrum')) {
+      return 0;
+    }
+  }
+
+  // Fallback to constants for stablecoins and other tokens
+  if (symbolLower.includes('usdc') || symbolLower.includes('usdt')) {
+    return 1.00; // Fallback to 1.00 for USDC and USDT
+  } else if (symbolLower.includes('strk')) {
+    return 0.75; // Fallback to 0.75 for STRK
   }
 
   // Default fallback price
@@ -75,12 +78,16 @@ interface BackendToken {
   };
   amount: string;
   updateDate: string;
+  percentChange?: number; // Add percent change from backend
 }
 
 interface BackendBalances {
   ethereum: BackendToken[];
   polygon: BackendToken[];
   arbitrum: BackendToken[];
+  ethPrice?: number;
+  maticPrice?: number;
+  arbPrice?: number;
 }
 
 // Processed token interface
@@ -115,6 +122,12 @@ interface TokenBalanceContextType {
   polygonBalance: number;
   arbitrumBalance: number;
 
+  // Real-time prices
+  backendPrices: BackendTokenPrices | null;
+
+  // Portfolio performance
+  totalPercentageChange: number;
+
   // Status
   hasBalances: boolean;
   isLoading: boolean;
@@ -134,6 +147,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
   const [chainBalances, setChainBalances] = useState<BackendBalances | null>(null);
   const [balancesLoading, setBalancesLoading] = useState(false);
   const [pricesLoading, setPricesLoading] = useState(false);
+  const [backendPrices, setBackendPrices] = useState<BackendTokenPrices | null>(null);
 
   // Fetch balance data from backend
   const fetchBalances = useCallback(async () => {
@@ -141,6 +155,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
 
     try {
       setBalancesLoading(true);
+      console.log('Fetching balances for user:', userData.uid);
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/users/uid/${userData.uid}/balance`);
 
@@ -149,6 +164,25 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
 
         if (data.success) {
           setChainBalances(data.data);
+          
+          // Extract token prices from backend response
+          if (data.data.ethPrice && data.data.maticPrice && data.data.arbPrice) {
+            setBackendPrices({
+              ethPrice: data.data.ethPrice,
+              maticPrice: data.data.maticPrice,
+              arbPrice: data.data.arbPrice
+            });
+            console.log('Backend token prices set:', {
+              ethPrice: data.data.ethPrice,
+              maticPrice: data.data.maticPrice,
+              arbPrice: data.data.arbPrice
+            });
+          } else {
+            console.warn('Backend token prices not available. ETH, POL, and ARB tokens will have 0 value until prices are fetched.');
+            setBackendPrices(null);
+          }
+          
+          console.log('Chain balances set:', data.data);
         }
       } else {
         console.error('Backend response not ok:', response.status, response.statusText);
@@ -177,12 +211,14 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
         ethereumBalance: 0,
         polygonBalance: 0,
         arbitrumBalance: 0,
-        hasBalances: false
+        hasBalances: false,
+        totalPercentageChange: 0
       };
     }
 
     const tokens: ProcessedToken[] = [];
     let totalValue = 0;
+    let totalWeightedChange = 0;
 
     // Process Ethereum balances
     if (chainBalances.ethereum && chainBalances.ethereum.length > 0) {
@@ -193,11 +229,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           name: backendToken.token.name,
           url: getTokenIconUrl(backendToken.token.symbol),
           portfolioPercent: 0, // Will calculate after total
-          price: getTokenPrice(backendToken.token.symbol),
-          priceChange: 0, // TODO: Get from price API
+          price: getTokenPrice(backendToken.token.symbol, backendPrices),
+          priceChange: backendToken.percentChange || 0, // Use percentChange from backend
           balance: parseFloat(backendToken.amount),
           value: 0, // Will calculate after balance
-          isPositive: true,
+          isPositive: (backendToken.percentChange || 0) >= 0, // Calculate based on percent change
           blockchain: 'ethereum',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
@@ -206,6 +242,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
             ethereum: parseFloat(backendToken.amount)
           }
         };
+        
+        if (backendToken.percentChange !== undefined) {
+          console.log(`ETH token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}%`);
+        }
+        
         tokens.push(token);
       });
     }
@@ -219,11 +260,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           name: backendToken.token.name,
           url: getTokenIconUrl(backendToken.token.symbol),
           portfolioPercent: 0,
-          price: getTokenPrice(backendToken.token.symbol),
-          priceChange: 0,
+          price: getTokenPrice(backendToken.token.symbol, backendPrices),
+          priceChange: backendToken.percentChange || 0,
           balance: parseFloat(backendToken.amount),
           value: 0,
-          isPositive: true,
+          isPositive: (backendToken.percentChange || 0) >= 0,
           blockchain: 'polygon',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
@@ -232,6 +273,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
             polygon: parseFloat(backendToken.amount)
           }
         };
+        
+        if (backendToken.percentChange !== undefined) {
+          console.log(`POL token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}%`);
+        }
+        
         tokens.push(token);
       });
     }
@@ -245,11 +291,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           name: backendToken.token.name,
           url: getTokenIconUrl(backendToken.token.symbol),
           portfolioPercent: 0,
-          price: getTokenPrice(backendToken.token.symbol),
-          priceChange: 0,
+          price: getTokenPrice(backendToken.token.symbol, backendPrices),
+          priceChange: backendToken.percentChange || 0,
           balance: parseFloat(backendToken.amount),
           value: 0,
-          isPositive: true,
+          isPositive: (backendToken.percentChange || 0) >= 0,
           blockchain: 'arbitrum',
           isNative: backendToken.token.isNative,
           tokenAddress: backendToken.token.tokenAddress,
@@ -258,6 +304,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
             arbitrum: parseFloat(backendToken.amount)
           }
         };
+        
+        if (backendToken.percentChange !== undefined) {
+          console.log(`ARB token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}%`);
+        }
+        
         tokens.push(token);
       });
     }
@@ -284,7 +335,13 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           existingToken.chainBalances = { ...existingToken.chainBalances, ...token.chainBalances };
         }
         
-        console.log(`Aggregating ${key}: Combined balance ${existingToken.balance}, value ${existingToken.value}, chains: ${existingToken.blockchain}`);
+        // For percentage change, use weighted average based on balance
+        if (token.balance > 0) {
+          const weight = token.balance / (existingToken.balance + token.balance);
+          existingToken.priceChange = (existingToken.priceChange * (1 - weight)) + (token.priceChange * weight);
+        }
+        
+        console.log(`Aggregating ${key}: Combined balance ${existingToken.balance}, value ${existingToken.value}, chains: ${existingToken.blockchain}, priceChange: ${existingToken.priceChange}%`);
         
         // Use the first token's metadata (name, url, etc.) as primary
         // Keep the first token's price (they should be the same for stablecoins)
@@ -295,7 +352,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           value: token.balance * token.price
         };
         aggregatedTokens.set(key, newToken);
-        console.log(`First occurrence of ${key}: Balance ${newToken.balance}, value ${newToken.value}, chain: ${newToken.blockchain}`);
+        console.log(`First occurrence of ${key}: Balance ${newToken.balance}, value ${newToken.value}, chain: ${newToken.blockchain}, priceChange: ${newToken.priceChange}%`);
       }
     });
 
@@ -307,7 +364,8 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
       balance: t.balance,
       value: t.value,
       blockchain: t.blockchain,
-      chainBalances: t.chainBalances
+      chainBalances: t.chainBalances,
+      priceChange: t.priceChange
     })));
 
     // Calculate values and percentages
@@ -315,25 +373,32 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
       totalValue += token.value;
     });
 
-    // Calculate portfolio percentages
+    // Calculate portfolio percentages and weighted percentage change
     if (totalValue > 0) {
       finalTokens.forEach(token => {
         token.portfolioPercent = (token.value / totalValue) * 100;
+        
+        // Calculate weighted contribution to total percentage change
+        if (token.priceChange !== undefined && !isNaN(token.priceChange)) {
+          const weight = token.value / totalValue;
+          totalWeightedChange += token.priceChange * weight;
+        }
       });
     }
 
     const result = {
       totalPortfolioValue: totalValue,
       tokenBalances: finalTokens,
-      ethereumBalance: tokens.filter(t => t.blockchain === 'ethereum').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol)), 0),
-      polygonBalance: tokens.filter(t => t.blockchain === 'polygon').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol)), 0),
-      arbitrumBalance: tokens.filter(t => t.blockchain === 'arbitrum').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol)), 0),
-      hasBalances: finalTokens.length > 0
+      ethereumBalance: tokens.filter(t => t.blockchain === 'ethereum').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol, backendPrices)), 0),
+      polygonBalance: tokens.filter(t => t.blockchain === 'polygon').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol, backendPrices)), 0),
+      arbitrumBalance: tokens.filter(t => t.blockchain === 'arbitrum').reduce((sum, t) => sum + (t.balance * getTokenPrice(t.symbol, backendPrices)), 0),
+      hasBalances: finalTokens.length > 0,
+      totalPercentageChange: totalWeightedChange
     };
 
     console.log('Processed token data:', result);
     return result;
-  }, [chainBalances]);
+  }, [chainBalances, backendPrices]);
 
   const getTokenByBlockchain = (blockchain: string): ProcessedToken | null => {
     return tokenBalanceData.tokenBalances.find(t => t.blockchain === blockchain) || null;
@@ -354,6 +419,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
   const contextValue: TokenBalanceContextType = {
     ...tokenBalanceData,
     chainBalances,
+    backendPrices,
     isLoading: loading || balancesLoading,
     pricesLoading,
     refreshBalances: fetchBalances,
