@@ -20,13 +20,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
+import { useTokenBalance } from "@/contexts/TokenBalanceContext"
 
 export default function P2PNavbar() {
-  const [isOpen, setIsOpen] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const { currentUser, logout } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const { totalPortfolioValue, refreshBalances, isLoading: balancesLoading } = useTokenBalance()
 
   const handleLogout = async () => {
     try {
@@ -52,6 +53,13 @@ export default function P2PNavbar() {
     return null
   }
 
+  // Helper function to format numbers without unnecessary decimal zeros
+  const formatNumber = (num: number, decimals: number = 2) => {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    const fixed = num.toFixed(decimals);
+    return fixed.replace(/\.?0+$/, '');
+  };
+
   return (
     <>
       <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -76,7 +84,7 @@ export default function P2PNavbar() {
               {/* Balance */}
               <Link href="/wallet" className="flex items-center space-x-2 bg-muted/20 hover:bg-muted/30 px-4 py-2 rounded-lg transition-colors cursor-pointer border border-border">
                 <Wallet className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-white">$6.08</span>
+                <span className="text-sm font-medium text-white">${balancesLoading ? 'Loading...' : formatNumber(totalPortfolioValue)}</span>
                 <div className="flex items-center gap-1 text-green-500 text-xs">
                   <span>+1.69%</span>
                 </div>

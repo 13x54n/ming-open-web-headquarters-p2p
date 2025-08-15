@@ -12,6 +12,8 @@ import {
   ArrowRightLeft,
   Copy,
   Check,
+  Loader2,
+  RefreshCcw,
 } from 'lucide-react';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -175,6 +177,17 @@ export default function WalletPage() {
                   <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span className="hidden sm:inline">Withdraw</span>
                   <span className="sm:hidden">Withdraw</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                  onClick={refreshBalances}
+                  disabled={balancesLoading}
+                >
+                  {balancesLoading ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" /> : <RefreshCcw className="h-3 w-3 sm:h-4 sm:w-4" />}
+                  <span className="hidden sm:inline">Refresh</span>
+                  <span className="sm:hidden">Refresh</span>
                 </Button>
               </div>
             </div>
