@@ -18,11 +18,19 @@ import { useAuth } from '@/contexts/AuthContext';
 
 
 export default function SettingsPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(true);
 
   const handleDeleteAccount = () => {
     // TODO: Implement account deletion with confirmation
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
   return (
     <ProtectedRoute>
@@ -73,11 +81,11 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Sign Out</p>
-              <p className="text-sm text-muted-foreground"></p>
+              <p className="text-sm text-muted-foreground">Sign out from your current session</p>
             </div>
             <Button
-              variant=""
-              onClick={handleDeleteAccount}
+              variant="outline"
+              onClick={handleLogout}
               className="flex items-center gap-2"
             >
               <LogOut className="h-4 w-4" />
