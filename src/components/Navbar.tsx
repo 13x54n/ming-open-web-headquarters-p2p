@@ -214,9 +214,9 @@ export default function P2PNavbar() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 py-1 bg-black border-t border-border safe-area-bottom">
-        <div className="flex items-center justify-around px-6 pt-2">
+            {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+        <div className="flex items-center justify-around px-6 py-2 safe-area-bottom">
           <Link href="/" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
             <Home className="h-6 w-6 text-muted-foreground" />
           </Link>

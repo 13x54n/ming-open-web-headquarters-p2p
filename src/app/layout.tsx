@@ -10,6 +10,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster as HotToaster } from "react-hot-toast"
 import ServiceWorkerRegistration from "@/lib/ServiceWorkerRegistration";
 import { TokenBalanceProvider } from "@/contexts/TokenBalanceContext";
+import ScrollPositionProvider from "@/components/ScrollPositionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,7 +58,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
   return (
     <html lang="en" className="dark">
       <body
@@ -65,11 +65,12 @@ export default function RootLayout({
       >
         <ServiceWorkerRegistration />
         <LoadingScreen />
+        <ScrollPositionProvider />
         <AuthProvider>
           <TokenBalanceProvider>
             <div className="min-h-screen flex flex-col">
               <NavbarWrapper />
-              <main className="flex-1">
+              <main className="flex-1 mobile-safe-bottom md:pb-0">
                 {children}
               </main>
             </div>

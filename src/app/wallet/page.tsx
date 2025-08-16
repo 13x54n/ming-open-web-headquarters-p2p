@@ -50,6 +50,16 @@ export default function WalletPage() {
     return fixed.replace(/\.?0+$/, '');
   };
 
+  const formatTokenSymbol = (symbol: string) => {
+    // Remove -SEPOLIA and -AMOY suffixes first, then any remaining SEPOLIA or AMOY
+    return symbol.replace(/-SEPOLIA$/i, '').replace(/-AMOY$/i, '').replace(/SEPOLIA$/i, '').replace(/AMOY$/i, '');
+  };
+
+  const formatTokenName = (name: string) => {
+    // Remove -SEPOLIA and -AMOY suffixes first, then any remaining SEPOLIA or AMOY, then testnet references
+    return name.replace(/-SEPOLIA$/i, '').replace(/-AMOY$/i, '').replace(/SEPOLIA$/i, '').replace(/AMOY$/i, '').replace(/Sepolia Testnet/i, '').replace(/Amoy Testnet/i, '').trim();
+  };
+
   // Use real token balances from context instead of hardcoded data
   const tokens = tokenBalances || [];
   
@@ -183,8 +193,8 @@ export default function WalletPage() {
                   }}
                 >
                   <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Withdraw</span>
-                  <span className="sm:hidden">Withdraw</span>
+                  <span className="hidden sm:inline">Transfer</span>
+                  <span className="sm:hidden">Transfer</span>
                 </Button>
 
                 <Button
@@ -267,8 +277,8 @@ export default function WalletPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <div>
-                                <div className="font-medium">{token.symbol}</div>
-                                <div className="text-sm text-muted-foreground">{token.name}</div>
+                                <div className="font-medium">{formatTokenSymbol(token.symbol)}</div>
+                                <div className="text-sm text-muted-foreground">{formatTokenName(token.name)}</div>
                               </div>
                             </div>
                           </div>
@@ -299,7 +309,7 @@ export default function WalletPage() {
                             <div>
                               <div className="text-sm">${formatNumber(token.value)}</div>
                               <div className="text-xs text-muted-foreground">
-                                {formatNumber(token.balance)} {token.symbol}
+                                {formatNumber(token.balance)} {formatTokenSymbol(token.symbol)}
                               </div>
                             </div>
                           </div>
@@ -328,9 +338,9 @@ export default function WalletPage() {
                 <div className="sm:hidden space-y-3">
                   {balancesLoading ? (
                     [1, 2, 3].map((i) => (
-                      <div key={`mobile-skeleton-${i}`} className="flex items-center justify-between p-4 bg-card border border-border rounded-lg">
+                      <div key={`mobile-skeleton-${i}`} className={`flex items-center justify-between p-4 bg-card border border-border ${i === 3 ? 'rounded-lg' : 'border-b-0 rounded-t-lg'} ${i === 1 ? 'rounded-t-lg' : ''}`}>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-muted animate-pulse"></div>
+                          <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
                           <div className="space-y-2">
                             <div className="h-4 w-16 bg-muted rounded animate-pulse"></div>
                             <div className="h-3 w-20 bg-muted rounded animate-pulse"></div>
@@ -343,23 +353,17 @@ export default function WalletPage() {
                       </div>
                     ))
                   ) : validTokens.length > 0 ? (
-                    validTokens.map((token) => (
-                      <div key={`mobile-${token.id}`} className="flex items-center justify-between p-4 bg-card border border-border rounded-lg">
+                    validTokens.map((token, index) => (
+                      <div key={`mobile-${token.id}`} className={`flex items-center justify-between px-4 border-t bottom-b py-2 border-border ${index === validTokens.length - 1 ? 'rounded-lg' : 'border-b-0 '}`}>
                         {/* Token Info */}
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full overflow-hidden">
-                            <Image src={token.url} alt={token.symbol} width={40} height={40} className="w-full h-full object-cover" />
+                          <div className="w-8 h-8 rounded-full overflow-hidden">
+                            <Image src={token.url} alt={token.symbol} width={32} height={32} className="w-full h-full object-cover" />
                           </div>
                           <div>
-                            <div className="font-medium text-sm">{token.symbol}</div>
-                            <div className="text-xs text-muted-foreground">{token.name}</div>
-                            {token.blockchain.includes(',') && (
-                              <div className="text-xs text-blue-500">
-                                {token.blockchain.split(', ').map(chain => 
-                                  chain.charAt(0).toUpperCase() + chain.slice(1)
-                                ).join(' + ')}
-                              </div>
-                            )}
+                            <div className="font-medium text-sm">{formatTokenSymbol(token.symbol)}</div>
+                            <div className="text-xs text-muted-foreground">{formatTokenName(token.name)}</div>
+                            
                           </div>
                         </div>
 
@@ -367,7 +371,7 @@ export default function WalletPage() {
                         <div className="text-right">
                           <div className="text-sm font-medium">${formatNumber(token.value)}</div>
                           <div className="text-xs text-muted-foreground">
-                            {formatNumber(token.balance)} {token.symbol}
+                            {formatNumber(token.balance)} {formatTokenSymbol(token.symbol)}
                           </div>
                           <div className={`flex items-center gap-1 text-xs ${token.isPositive ? 'text-green-500' : 'text-red-500'}`}>
                             {token.isPositive ? (
@@ -377,13 +381,7 @@ export default function WalletPage() {
                             )}
                             <span>{formatNumber(Math.abs(token.priceChange))}%</span>
                           </div>
-                          {token.chainBalances && Object.keys(token.chainBalances).length > 1 && (
-                            <div className="text-xs text-blue-500">
-                              {Object.entries(token.chainBalances).map(([chain, balance]) => 
-                                `${chain.charAt(0).toUpperCase() + chain.slice(1)}: ${formatNumber(balance)}`
-                              ).join(' | ')}
-                            </div>
-                          )}
+                          
                         </div>
                       </div>
                     ))
@@ -533,7 +531,7 @@ export default function WalletPage() {
                       }}
                       className="w-full p-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
-                      <option value="">Select a blockchain</option>
+                      <option value="">Select Chain</option>
                       {chainOptions.map((chain) => (
                         <option
                           key={chain.id}

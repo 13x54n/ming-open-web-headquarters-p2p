@@ -155,7 +155,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
 
     try {
       setBalancesLoading(true);
-      console.log('Fetching balances for user:', userData.uid);
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/users/uid/${userData.uid}/balance`);
 
@@ -172,17 +171,10 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
               maticPrice: data.data.maticPrice,
               arbPrice: data.data.arbPrice
             });
-            console.log('Backend token prices set:', {
-              ethPrice: data.data.ethPrice,
-              maticPrice: data.data.maticPrice,
-              arbPrice: data.data.arbPrice
-            });
           } else {
             console.warn('Backend token prices not available. ETH, POL, and ARB tokens will have 0 value until prices are fetched.');
             setBackendPrices(null);
           }
-          
-          console.log('Chain balances set:', data.data);
         }
       } else {
         console.error('Backend response not ok:', response.status, response.statusText);
@@ -243,7 +235,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           }
         };
         
-        console.log(`ETH token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}, priceChange = ${token.priceChange}%`);
         tokens.push(token);
       });
     }
@@ -271,7 +262,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           }
         };
         
-        console.log(`POL token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}, priceChange = ${token.priceChange}%`);
         tokens.push(token);
       });
     }
@@ -299,7 +289,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           }
         };
         
-        console.log(`ARB token ${backendToken.token.symbol}: percentChange = ${backendToken.percentChange}, priceChange = ${token.priceChange}%`);
         tokens.push(token);
       });
     }
@@ -340,8 +329,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
         }
         // If existing token has percentage change but new one doesn't, keep existing
         
-        console.log(`Aggregating ${key}: Combined balance ${existingToken.balance}, value ${existingToken.value}, chains: ${existingToken.blockchain}, priceChange: ${existingToken.priceChange}%`);
-        
         // Use the first token's metadata (name, url, etc.) as primary
         // Keep the first token's price (they should be the same for stablecoins)
       } else {
@@ -351,21 +338,11 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
           value: token.balance * token.price
         };
         aggregatedTokens.set(key, newToken);
-        console.log(`First occurrence of ${key}: Balance ${newToken.balance}, value ${newToken.value}, chain: ${newToken.blockchain}, priceChange: ${newToken.priceChange}%`);
       }
     });
 
     // Convert aggregated tokens back to array
     const finalTokens = Array.from(aggregatedTokens.values());
-    
-    console.log('Final aggregated tokens:', finalTokens.map(t => ({
-      symbol: t.symbol,
-      balance: t.balance,
-      value: t.value,
-      blockchain: t.blockchain,
-      chainBalances: t.chainBalances,
-      priceChange: t.priceChange
-    })));
 
     // Calculate values and percentages
     finalTokens.forEach(token => {
@@ -395,7 +372,6 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
       totalPercentageChange: totalWeightedChange
     };
 
-    console.log('Processed token data:', result);
     return result;
   }, [chainBalances, backendPrices]);
 
