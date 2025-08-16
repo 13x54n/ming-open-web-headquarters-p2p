@@ -11,6 +11,7 @@ import {
   Palette,
   Smartphone,
   Trash2,
+  LogOut,
 } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,6 +70,21 @@ export default function SettingsPage() {
             </CardContent>
           </Card> */}
 
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Sign Out</p>
+              <p className="text-sm text-muted-foreground"></p>
+            </div>
+            <Button
+              variant=""
+              onClick={handleDeleteAccount}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
+
           {/* Appearance Section */}
           <Card>
             <CardHeader>
@@ -116,6 +132,8 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+
+
           {/* Actions Section */}
           <Card>
             <CardHeader>
@@ -124,6 +142,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+
                 <Label className="text-destructive">Danger Zone</Label>
                 <div className="p-4 border border-destructive/25 rounded-lg bg-destructive/5">
                   <div className="flex items-center justify-between">

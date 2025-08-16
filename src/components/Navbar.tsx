@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, Wallet, User, Bell, LogOut, Settings, ChevronDown, X, Home, BarChart3 } from "lucide-react"
+import { Menu, Wallet, User, Bell, LogOut, Settings, ChevronDown, X, Home, BarChart3, FileText, ReceiptText } from "lucide-react"
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
@@ -204,17 +204,18 @@ export default function P2PNavbar() {
 
             {/* Right side - Mobile */}
             <div className="md:hidden flex items-center space-x-3">
-              <Button variant="ghost" onClick={handleLogout} className="relative cursor-pointer hover:bg-muted/20 px-3 py-2">
-                <LogOut className="h-4 w-4 text-muted-foreground mr-1" />
-                <span className="text-sm">Logout</span>
-              </Button>
+              <Link href="/transactions">
+                <Button variant="ghost" className="relative cursor-pointer hover:bg-muted/20 px-3 py-2">
+                  <ReceiptText className="h-6 w-6 text-muted-foreground" />
+                </Button>
+              </Link>
             </div>
 
           </div>
         </div>
       </nav>
 
-            {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
         <div className="flex items-center justify-around px-6 py-2 safe-area-bottom">
           <Link href="/" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
