@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Filter } from 'lucide-react';
 
@@ -14,6 +14,20 @@ export default function TransactionsPage() {
   const { userData, loading } = useBackendUser();
   const { toast } = useToast();
   const router = useRouter();
+
+  // Listen for global refresh events
+  useEffect(() => {
+    const handleRefresh = () => {
+      // Refresh transaction data - in real app, you'd call your data fetching function
+      toast({
+        title: "Transactions refreshed",
+        description: "Transaction data has been updated",
+      });
+    };
+
+    window.addEventListener('app:refresh', handleRefresh);
+    return () => window.removeEventListener('app:refresh', handleRefresh);
+  }, [toast]);
 
   // Mock transaction data - replace with real data from your backend
   const transactions = [

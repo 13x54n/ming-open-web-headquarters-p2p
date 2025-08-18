@@ -11,6 +11,7 @@ import { Toaster as HotToaster } from "react-hot-toast"
 import ServiceWorkerRegistration from "@/lib/ServiceWorkerRegistration";
 import { TokenBalanceProvider } from "@/contexts/TokenBalanceContext";
 import ScrollPositionProvider from "@/components/ScrollPositionProvider";
+import { GlobalPullToRefresh } from "@/components/GlobalPullToRefresh";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,12 +69,14 @@ export default function RootLayout({
         <ScrollPositionProvider />
         <AuthProvider>
           <TokenBalanceProvider>
-            <div className="min-h-screen flex flex-col">
-              <NavbarWrapper />
-              <main className="flex-1 mobile-safe-bottom md:pb-0">
-                {children}
-              </main>
-            </div>
+            <GlobalPullToRefresh>
+              <div className="min-h-screen flex flex-col">
+                <NavbarWrapper />
+                <main className="flex-1 mobile-safe-bottom md:pb-0">
+                  {children}
+                </main>
+              </div>
+            </GlobalPullToRefresh>
           </TokenBalanceProvider>
         </AuthProvider>
         <Analytics />

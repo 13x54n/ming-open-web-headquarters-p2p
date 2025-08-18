@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+
 export default function DepositPage() {
   const [copied, setCopied] = useState(false);
   const [selectedChain, setSelectedChain] = useState('ethereum');
@@ -28,6 +29,8 @@ export default function DepositPage() {
   const { userData, loading } = useBackendUser();
   const { toast } = useToast();
   const router = useRouter();
+
+
 
   // Helper function to copy to clipboard
   const copyToClipboard = async (text: string) => {
@@ -78,6 +81,8 @@ export default function DepositPage() {
 
   return (
     <ProtectedRoute>
+
+
       <div className="min-h-screen bg-background text-foreground">
         {loading ? (
           <div className="flex items-center justify-center min-h-screen">

@@ -32,6 +32,16 @@ export default function WalletPage() {
   const { tokenBalances, totalPortfolioValue, refreshBalances, isLoading: balancesLoading, totalPercentageChange } = useTokenBalance();
   const router = useRouter();
 
+  // Listen for global refresh events
+  useEffect(() => {
+    const handleRefresh = () => {
+      refreshBalances();
+    };
+
+    window.addEventListener('app:refresh', handleRefresh);
+    return () => window.removeEventListener('app:refresh', handleRefresh);
+  }, [refreshBalances]);
+
   // Helper function to format numbers without unnecessary decimal zeros
   const formatNumber = (num: number, decimals: number = 2) => {
     if (num === null || num === undefined || isNaN(num)) return '0';
