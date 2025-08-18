@@ -37,12 +37,18 @@ export default function WalletPage() {
   const [activeTab, setActiveTab] = useState('assets');
   const [copied, setCopied] = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedChain, setSelectedChain] = useState('ethereum');
   const [depositMethod, setDepositMethod] = useState<'ming' | 'crypto'>('ming');
+  const [transferMethod, setTransferMethod] = useState<'ming' | 'crypto'>('ming');
+  const [transferRecipient, setTransferRecipient] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [selectedToken, setSelectedToken] = useState('');
+  const [transferTab, setTransferTab] = useState<'setup' | 'details'>('setup');
   const { userData, loading } = useBackendUser();
   const { toast } = useToast();
   const { tokenBalances, totalPortfolioValue, refreshBalances, isLoading: balancesLoading, totalPercentageChange } = useTokenBalance();
-  
+
   // Helper function to format numbers without unnecessary decimal zeros
   const formatNumber = (num: number, decimals: number = 2) => {
     if (num === null || num === undefined || isNaN(num)) return '0';
@@ -62,7 +68,7 @@ export default function WalletPage() {
 
   // Use real token balances from context instead of hardcoded data
   const tokens = tokenBalances || [];
-  
+
   // Use real total portfolio value from context with fallback
   const totalValue = totalPortfolioValue || 0;
   const dailyChange = 0.10; // TODO: Calculate from price changes
@@ -72,12 +78,12 @@ export default function WalletPage() {
   const calculatedTotalValue = totalValue > 0 ? totalValue : tokens.reduce((sum, token) => sum + (token.value || 0), 0);
 
   // Validate token structure and filter out invalid tokens
-  const validTokens = tokens.filter(token => 
-    token && 
-    typeof token === 'object' && 
-    token.symbol && 
-    token.name && 
-    typeof token.balance === 'number' && 
+  const validTokens = tokens.filter(token =>
+    token &&
+    typeof token === 'object' &&
+    token.symbol &&
+    token.name &&
+    typeof token.balance === 'number' &&
     typeof token.value === 'number'
   );
 
@@ -187,10 +193,7 @@ export default function WalletPage() {
                 <Button
                   variant="outline"
                   className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
-                  onClick={() => {
-                    // TODO: Implement withdraw functionality
-
-                  }}
+                  onClick={() => setTransferDialogOpen(true)}
                 >
                   <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span className="hidden sm:inline">Transfer</span>
@@ -363,7 +366,7 @@ export default function WalletPage() {
                           <div>
                             <div className="font-medium text-sm">{formatTokenSymbol(token.symbol)}</div>
                             <div className="text-xs text-muted-foreground">{formatTokenName(token.name)}</div>
-                            
+
                           </div>
                         </div>
 
@@ -381,7 +384,7 @@ export default function WalletPage() {
                             )}
                             <span>{formatNumber(Math.abs(token.priceChange))}%</span>
                           </div>
-                          
+
                         </div>
                       </div>
                     ))
@@ -643,6 +646,402 @@ export default function WalletPage() {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Transfer Dialog */}
+        <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ArrowRightLeft className="h-5 w-5" />
+                Transfer Funds
+              </DialogTitle>
+              <DialogDescription>
+                {transferMethod === 'ming'
+                  ? 'Transfer funds to other Ming users using their User ID'
+                  : transferMethod === 'crypto'
+                    ? 'Transfer funds to external crypto wallets'
+                    : 'Choose how you want to transfer funds'
+                }
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Transfer Tabs */}
+            <div className="flex border-b border-border">
+              <button
+                onClick={() => setTransferTab('setup')}
+                className={`px-4 py-2 text-sm font-medium transition-colors relative ${transferTab === 'setup'
+                  ? 'text-white border-b-2 border-purple-500'
+                  : 'text-muted-foreground hover:text-white'
+                  }`}
+              >
+                Setup
+              </button>
+              <button
+                onClick={() => setTransferTab('details')}
+                className={`px-4 py-2 text-sm font-medium transition-colors relative ${transferTab === 'details'
+                  ? 'text-white border-b-2 border-purple-500'
+                  : 'text-muted-foreground hover:text-white'
+                  }`}
+                disabled={!selectedToken || (transferMethod === 'crypto' && !selectedChain)}
+              >
+                Details
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Setup Tab - Transfer Method and Token/Chain Selection */}
+              {transferTab === 'setup' && (
+                <>
+                  {/* Transfer Method Selection */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Transfer Method</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setTransferMethod('ming');
+                          setSelectedChain(''); // Reset chain selection when switching to ming
+                        }}
+                        className={`p-3 border rounded-lg text-sm font-medium transition-colors ${transferMethod === 'ming'
+                          ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                          : 'border-border hover:border-purple-500/50'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 justify-center">
+                          <span>👥</span>
+                          <span>To Ming Users</span>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setTransferMethod('crypto');
+                          setSelectedChain(''); // Reset chain selection when switching to crypto
+                        }}
+                        className={`p-3 border rounded-lg text-sm font-medium transition-colors ${transferMethod === 'crypto'
+                          ? 'border-purple-500 bg-purple-500/10 text-purple-500'
+                          : 'border-border hover:border-purple-500/50'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 justify-center">
+                          <span>🔗</span>
+                          <span>To Crypto Wallet</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Token Selection */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Select Token</Label>
+                    <select
+                      value={selectedToken}
+                      onChange={(e) => setSelectedToken(e.target.value)}
+                      className="w-full p-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Select Token</option>
+                      {validTokens.map((token) => (
+                        <option key={token.id} value={token.id}>
+                          {formatTokenSymbol(token.symbol)} - Balance: {formatNumber(token.balance)} (${formatNumber(token.value)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Chain Selection for Crypto Transfers */}
+                  {transferMethod === 'crypto' && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Select Blockchain</Label>
+                      <select
+                        value={selectedChain}
+                        onChange={(e) => {
+                          const chainId = e.target.value;
+                          if (chainId) {
+                            const chain = chainOptions.find(c => c.id === chainId);
+                            if (chain?.hasWallet) {
+                              setSelectedChain(chainId);
+                            } else {
+                              toast({
+                                title: "Wallet Required",
+                                description: `You need to create a ${chain?.name} wallet first`,
+                                variant: "destructive",
+                              });
+                              setSelectedChain('');
+                            }
+                          } else {
+                            setSelectedChain('');
+                          }
+                        }}
+                        className="w-full p-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      >
+                        <option value="">Select Chain</option>
+                        {chainOptions.map((chain) => (
+                          <option
+                            key={chain.id}
+                            value={chain.id}
+                            disabled={!chain.hasWallet}
+                            className={!chain.hasWallet ? 'text-muted-foreground' : ''}
+                          >
+                            {chain.icon} {chain.name} ({chain.symbol})
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Create Wallet Option */}
+                      {selectedChain && !chainOptions.find(c => c.id === selectedChain)?.hasWallet && (
+                        <div className="space-y-3">
+                          <div className="p-4 border border-orange-500/20 bg-orange-500/10 rounded-lg">
+                            <div className="flex items-center gap-2 text-orange-500">
+                              <span className="text-sm font-medium">Wallet Required</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              You need to create a {chainOptions.find(c => c.id === selectedChain)?.name} wallet first
+                            </p>
+                          </div>
+
+                          <Button
+                            className="w-full"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'}/api/users/uid/${userData?.uid}/create-wallet/${selectedChain}`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                });
+
+                                if (response.ok) {
+                                  toast({
+                                    title: "Success!",
+                                    description: `${chainOptions.find(c => c.id === selectedChain)?.name} wallet created successfully`,
+                                  });
+                                  setTransferDialogOpen(false);
+                                  // Refresh user data
+                                  window.location.reload();
+                                } else {
+                                  throw new Error('Failed to create wallet');
+                                }
+                              } catch (err) {
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to create wallet",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            Create {chainOptions.find(c => c.id === selectedChain)?.name} Wallet
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Next Button */}
+                  {selectedToken && (transferMethod === 'ming' || (transferMethod === 'crypto' && selectedChain)) && (
+                    <Button
+                      className="w-full"
+                      onClick={() => setTransferTab('details')}
+                    >
+                      Next: Enter Details
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Details Tab - Amount and Recipient */}
+              {transferTab === 'details' && (
+                <>
+                                     {/* Amount Input */}
+                   <div className="space-y-3">
+                     <Label className="text-sm font-medium">Amount</Label>
+                     <Input
+                       type="number"
+                       placeholder="Enter amount"
+                       value={transferAmount}
+                       onChange={(e) => setTransferAmount(e.target.value)}
+                       className={`w-full ${(() => {
+                         if (!transferAmount || !selectedToken) return '';
+                         const selectedTokenData = validTokens.find(t => t.id === selectedToken);
+                         const transferAmountNum = parseFloat(transferAmount);
+                         if (selectedTokenData && !isNaN(transferAmountNum) && transferAmountNum > selectedTokenData.balance) {
+                           return 'border-red-500 focus:border-red-500';
+                         }
+                         return '';
+                       })()}`}
+                     />
+                     {selectedToken && (
+                       <div className="text-xs text-muted-foreground">
+                         Available: {formatNumber(validTokens.find(t => t.id === selectedToken)?.balance || 0)} {formatTokenSymbol(validTokens.find(t => t.id === selectedToken)?.symbol || '')}
+                       </div>
+                     )}
+                     {/* Real-time validation message */}
+                     {transferAmount && selectedToken && (() => {
+                       const selectedTokenData = validTokens.find(t => t.id === selectedToken);
+                       const transferAmountNum = parseFloat(transferAmount);
+                       
+                       if (!selectedTokenData) return null;
+                       
+                       if (isNaN(transferAmountNum)) {
+                         return (
+                           <div className="text-xs text-red-500">
+                             Please enter a valid number
+                           </div>
+                         );
+                       }
+                       
+                       if (transferAmountNum <= 0) {
+                         return (
+                           <div className="text-xs text-red-500">
+                             Amount must be greater than 0
+                           </div>
+                         );
+                       }
+                       
+                       if (transferAmountNum > selectedTokenData.balance) {
+                         return (
+                           <div className="text-xs text-red-500">
+                             Insufficient balance. You only have {formatNumber(selectedTokenData.balance)} {formatTokenSymbol(selectedTokenData.symbol)} available
+                           </div>
+                         );
+                       }
+                       
+                       return (
+                         <div className="text-xs text-green-500">
+                           ✓ Valid amount
+                         </div>
+                       );
+                     })()}
+                   </div>
+
+                  {/* Ming User Transfer Option */}
+                  {transferMethod === 'ming' && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Recipient User ID</Label>
+                        <Input
+                          placeholder="Enter recipient's User ID"
+                          value={transferRecipient}
+                          onChange={(e) => setTransferRecipient(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 text-blue-500 mb-2">
+                          <span className="text-sm font-medium">Transfer to Ming User</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Funds will be transferred instantly to the recipient's Ming account
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Crypto Wallet Transfer Option */}
+                  {transferMethod === 'crypto' && selectedChain && chainOptions.find(c => c.id === selectedChain)?.hasWallet && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          Recipient {chainOptions.find(c => c.id === selectedChain)?.name} Address
+                        </Label>
+                        <Input
+                          placeholder={`Enter ${chainOptions.find(c => c.id === selectedChain)?.name} wallet address`}
+                          value={transferRecipient}
+                          onChange={(e) => setTransferRecipient(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+
+                      <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 text-orange-500 mb-2">
+                          <span className="text-sm font-medium">External Transfer</span>
+                        </div>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          <li>• This will transfer funds to an external wallet</li>
+                          <li>• Network fees may apply</li>
+                          <li>• Transfer time depends on network congestion</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setTransferTab('setup')}
+                    >
+                      Back
+                    </Button>
+
+                    {/* Transfer Button */}
+                    {((transferMethod === 'ming' && transferRecipient && transferAmount) ||
+                      (transferMethod === 'crypto' && transferRecipient && transferAmount)) && (
+                                                 <Button
+                           className="flex-1"
+                           onClick={async () => {
+                             try {
+                               // Validate amount
+                               const selectedTokenData = validTokens.find(t => t.id === selectedToken);
+                               const transferAmountNum = parseFloat(transferAmount);
+                               
+                               if (!selectedTokenData) {
+                                 toast({
+                                   title: "Error",
+                                   description: "Selected token not found",
+                                   variant: "destructive",
+                                 });
+                                 return;
+                               }
+                               
+                               if (isNaN(transferAmountNum) || transferAmountNum <= 0) {
+                                 toast({
+                                   title: "Invalid Amount",
+                                   description: "Please enter a valid amount greater than 0",
+                                   variant: "destructive",
+                                 });
+                                 return;
+                               }
+                               
+                               if (transferAmountNum > selectedTokenData.balance) {
+                                 toast({
+                                   title: "Insufficient Balance",
+                                   description: `You only have ${formatNumber(selectedTokenData.balance)} ${formatTokenSymbol(selectedTokenData.symbol)} available`,
+                                   variant: "destructive",
+                                 });
+                                 return;
+                               }
+                               
+                               // TODO: Implement actual transfer logic
+                               toast({
+                                 title: "Transfer Initiated",
+                                 description: `Transferring ${transferAmount} ${formatTokenSymbol(selectedTokenData.symbol)} to ${transferRecipient}`,
+                               });
+                               setTransferDialogOpen(false);
+                               setTransferRecipient('');
+                               setTransferAmount('');
+                               setSelectedToken('');
+                               setSelectedChain('');
+                               setTransferMethod('ming');
+                               setTransferTab('setup');
+                             } catch (err) {
+                               toast({
+                                 title: "Error",
+                                 description: "Failed to initiate transfer",
+                                 variant: "destructive",
+                               });
+                             }
+                           }}
+                         >
+                           Confirm Transfer
+                         </Button>
+                      )}
+                  </div>
+                </>
               )}
             </div>
           </DialogContent>

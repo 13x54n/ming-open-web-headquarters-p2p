@@ -217,3 +217,49 @@ html {
     min-height: calc(100vh - 5rem);
   }
 }
+
+/* Custom dialog animations for smoother transitions */
+@keyframes dialog-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-slide-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes dialog-slide-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
+/* Apply custom animations to dialog */
+[data-radix-dialog-content] {
+  animation: dialog-slide-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-radix-dialog-content][data-state="closed"] {
+  animation: dialog-slide-out 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth backdrop animation */
+[data-radix-dialog-overlay] {
+  animation: dialog-fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}

@@ -204,10 +204,9 @@ export default function P2PNavbar() {
 
             {/* Right side - Mobile */}
             <div className="md:hidden flex items-center space-x-3">
-              <Link href="/transactions">
-                <Button variant="ghost" className="relative cursor-pointer hover:bg-muted/20 px-3 py-2">
-                  <ReceiptText className="h-6 w-6 text-muted-foreground" />
-                </Button>
+              <Link href="/notifications" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors relative">
+                <Bell className="h-5 w-5 text-muted-foreground" />
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-xs bg-red-500 text-white">3</Badge>
               </Link>
             </div>
 
@@ -226,9 +225,8 @@ export default function P2PNavbar() {
             <Wallet className="h-6 w-6 text-muted-foreground" />
           </Link>
 
-          <Link href="/notifications" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors relative">
-            <Bell className="h-6 w-6 text-muted-foreground" />
-            <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-xs bg-red-500 text-white">3</Badge>
+          <Link href="/transactions" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
+              <ReceiptText className="h-6 w-6 text-muted-foreground" />
           </Link>
 
           <Link href="/settings" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
