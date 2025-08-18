@@ -416,58 +416,58 @@ export default function TransactionsPage() {
                   </div>
                 ))}
                </TabsContent>
+
+               {/* Empty States for each tab */}
+               <TabsContent value="all" className="mt-6">
+                 {getFilteredTransactions('all').length === 0 && (
+                   <div className="text-center py-12">
+                     <div className="text-4xl mb-4">📊</div>
+                     <h3 className="text-lg font-medium text-white mb-2">No transactions found</h3>
+                     <p className="text-muted-foreground">Your transaction history will appear here</p>
+                   </div>
+                 )}
+               </TabsContent>
+
+               <TabsContent value="rewards" className="mt-6">
+                 {getFilteredTransactions('rewards').length === 0 && (
+                   <div className="text-center py-12">
+                     <div className="text-4xl mb-4">🎁</div>
+                     <h3 className="text-lg font-medium text-white mb-2">No rewards found</h3>
+                     <p className="text-muted-foreground">Your reward transactions will appear here</p>
+                   </div>
+                 )}
+               </TabsContent>
+
+               <TabsContent value="trades" className="mt-6">
+                 {getFilteredTransactions('trades').length === 0 && (
+                   <div className="text-center py-12">
+                     <div className="text-4xl mb-4">📈</div>
+                     <h3 className="text-lg font-medium text-white mb-2">No trades found</h3>
+                     <p className="text-muted-foreground">Your trading activity will appear here</p>
+                   </div>
+                 )}
+               </TabsContent>
+
+               <TabsContent value="transfers" className="mt-6">
+                 {getFilteredTransactions('transfers').length === 0 && (
+                   <div className="text-center py-12">
+                     <div className="text-4xl mb-4">💸</div>
+                     <h3 className="text-lg font-medium text-white mb-2">No transfers found</h3>
+                     <p className="text-muted-foreground">Your transfer transactions will appear here</p>
+                   </div>
+                 )}
+               </TabsContent>
+
+               <TabsContent value="pending" className="mt-6">
+                 {getFilteredTransactions('pending').length === 0 && (
+                   <div className="text-center py-12">
+                     <div className="text-4xl mb-4">⏳</div>
+                     <h3 className="text-lg font-medium text-white mb-2">No pending transactions</h3>
+                     <p className="text-muted-foreground">Your pending transactions will appear here</p>
+                   </div>
+                 )}
+               </TabsContent>
              </Tabs>
-
-            {/* Empty States for each tab */}
-            <TabsContent value="all" className="mt-6">
-              {getFilteredTransactions('all').length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">📊</div>
-                  <h3 className="text-lg font-medium text-white mb-2">No transactions found</h3>
-                  <p className="text-muted-foreground">Your transaction history will appear here</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="rewards" className="mt-6">
-              {getFilteredTransactions('rewards').length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">🎁</div>
-                  <h3 className="text-lg font-medium text-white mb-2">No rewards found</h3>
-                  <p className="text-muted-foreground">Your reward transactions will appear here</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="trades" className="mt-6">
-              {getFilteredTransactions('trades').length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">📈</div>
-                  <h3 className="text-lg font-medium text-white mb-2">No trades found</h3>
-                  <p className="text-muted-foreground">Your trading activity will appear here</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="transfers" className="mt-6">
-              {getFilteredTransactions('transfers').length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">💸</div>
-                  <h3 className="text-lg font-medium text-white mb-2">No transfers found</h3>
-                  <p className="text-muted-foreground">Your transfer transactions will appear here</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="pending" className="mt-6">
-              {getFilteredTransactions('pending').length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">⏳</div>
-                  <h3 className="text-lg font-medium text-white mb-2">No pending transactions</h3>
-                  <p className="text-muted-foreground">Your pending transactions will appear here</p>
-                </div>
-              )}
-            </TabsContent>
           </div>
         )}
       </div>
