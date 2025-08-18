@@ -184,6 +184,14 @@ export default function P2PNavbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+
+                    <Link href="/transactions" className="cursor-pointer hover:bg-muted/20">
+                      <ReceiptText className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span className="text-white">Transactions</span>
+                    </Link>
+
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/settings" className="cursor-pointer hover:bg-muted/20">
                       <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="text-white">Settings</span>
@@ -226,7 +234,7 @@ export default function P2PNavbar() {
           </Link>
 
           <Link href="/transactions" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-              <ReceiptText className="h-6 w-6 text-muted-foreground" />
+            <ReceiptText className="h-6 w-6 text-muted-foreground" />
           </Link>
 
           <Link href="/settings" className="flex flex-col items-center space-y-1 p-2 rounded-lg hover:bg-muted/20 transition-colors">

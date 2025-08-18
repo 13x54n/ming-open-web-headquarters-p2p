@@ -1,453 +1,461 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Search,
-  Filter,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  ExternalLink,
-  Copy
-} from 'lucide-react';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { ArrowLeft, Filter } from 'lucide-react';
 
-interface Transaction {
-  id: string;
-  abiFunctionSignature: string;
-  abiParameters: string[];
-  amounts: string[];
-  amountsInUSD: string;
-  blockHash: string;
-  blockHeight: number;
-  blockchain: string;
-  contractAddress: string;
-  createDate: string;
-  custodyType: string;
-  destinationAddress: string;
-  errorReason: string;
-  errorDetails: string;
-  estimatedFee: {
-    gasLimit: string;
-    gasPrice: string;
-    maxFee: string;
-    priorityFee: string;
-    baseFee: string;
-    networkFee: string;
-    networkFeeRaw: string;
-  };
-  feeLevel: string;
-  firstConfirmDate: string;
-  networkFee: string;
-  networkFeeInUSD: string;
-  nfts: string[];
-  operation: string;
-  refId: string;
-  sourceAddress: string;
-  state: string;
-  tokenId: string;
-  transactionType: string;
-  txHash: string;
-  updateDate: string;
-  userId: string;
-  walletId: string;
-  transactionScreeningEvaluation?: {
-    ruleName: string;
-    actions: string[];
-    screeningDate: string;
-    reasons: {
-      source: string;
-      sourceValue: string;
-      riskScore: string;
-      riskCategories: string[];
-      type: string;
-    }[];
-  };
-}
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBackendUser } from '@/hooks/useBackendUser';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TransactionsPage() {
-  const { currentUser } = useAuth();
+  const { userData, loading } = useBackendUser();
+  const { toast } = useToast();
   const router = useRouter();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [copied, setCopied] = useState(false);
 
-  // Mock data - replace with actual API call
-  useEffect(() => {
-    const mockTransactions: Transaction[] = [
-      {
-        id: "1",
-        abiFunctionSignature: "transfer(address,uint256)",
-        abiParameters: ["0x123...", "20000000"],
-        amounts: ["20 USDC"],
-        amountsInUSD: "20.00",
-        blockHash: "0x123...",
-        blockHeight: 12345678,
-        blockchain: "MATIC-AMOY",
-        contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        createDate: "2025-08-15T15:04:16Z",
-        custodyType: "DEVELOPER",
-        destinationAddress: "0xca9142d0b9804ef5e239d3bc1c7aa0d1c74e7350",
-        errorReason: "",
-        errorDetails: "",
-        estimatedFee: {
-          gasLimit: "21000",
-          gasPrice: "20",
-          maxFee: "5.935224468",
-          priorityFee: "1.022783914",
-          baseFee: "1.022783914",
-          networkFee: "0.0001246397138",
-          networkFeeRaw: "0.0001246397138"
-        },
-        feeLevel: "MEDIUM",
-        firstConfirmDate: "2025-08-15T15:04:16Z",
-        networkFee: "0.0001246397138",
-        networkFeeInUSD: "0.25",
-        nfts: [],
-        operation: "Transfer Inbound",
-        refId: "tx123",
-        sourceAddress: "0xca9142d0b9804ef5e239d3bc1c7aa0d1c74e7350",
-        state: "PENDING",
-        tokenId: "1",
-        transactionType: "INBOUND",
-        txHash: "0x0a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567890c9c",
-        updateDate: "2025-08-15T15:04:16Z",
-        userId: "user1",
-        walletId: "wallet1"
-      },
-      {
-        id: "2",
-        abiFunctionSignature: "transfer(address,uint256)",
-        abiParameters: ["0x123...", "200000000000000000"],
-        amounts: ["0.2 POL-AMOY"],
-        amountsInUSD: "0.40",
-        blockHash: "0x456...",
-        blockHeight: 12345679,
-        blockchain: "MATIC-AMOY",
-        contractAddress: "0x0000000000000000000000000000000000001010",
-        createDate: "2025-08-15T15:04:16Z",
-        custodyType: "DEVELOPER",
-        destinationAddress: "0xca9142d0b9804ef5e239d3bc1c7aa0d1c74e7350",
-        errorReason: "",
-        errorDetails: "",
-        estimatedFee: {
-          gasLimit: "21000",
-          gasPrice: "20",
-          maxFee: "5.935224468",
-          priorityFee: "1.022783914",
-          baseFee: "1.022783914",
-          networkFee: "0.0001246397138",
-          networkFeeRaw: "0.0001246397138"
-        },
-        feeLevel: "MEDIUM",
-        firstConfirmDate: "2025-08-15T15:04:16Z",
-        networkFee: "0.0001246397138",
-        networkFeeInUSD: "0.25",
-        nfts: [],
-        operation: "Transfer Inbound",
-        refId: "tx124",
-        sourceAddress: "0xca9142d0b9804ef5e239d3bc1c7aa0d1c74e7350",
-        state: "COMPLETED",
-        tokenId: "2",
-        transactionType: "INBOUND",
-        txHash: "0x61a2b3c4d5e6f789012345678901234567890123456789012345678901234567890123456789402f",
-        updateDate: "2025-08-15T15:04:16Z",
-        userId: "user1",
-        walletId: "wallet1"
-      },
-      {
-        id: "3",
-        abiFunctionSignature: "transfer(address,uint256)",
-        abiParameters: ["0x123...", "20000000"],
-        amounts: ["20 USDC"],
-        amountsInUSD: "20.00",
-        blockHash: "0x789...",
-        blockHeight: 12345680,
-        blockchain: "ARBITRUM-SEPOLIA",
-        contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        createDate: "2025-08-15T14:46:06Z",
-        custodyType: "DEVELOPER",
-        destinationAddress: "0xca9142d0b9804ef5e239d3bc1c7aa0d1c74e7350",
-        errorReason: "",
-        errorDetails: "",
-        estimatedFee: {
-          gasLimit: "21000",
-          gasPrice: "20",
-          maxFee: "5.935224468",
-          priorityFee: "1.022783914",
-          baseFee: "1.022783914",
-          networkFee: "0.0001246397138",
-          networkFeeRaw: "0.0001246397138"
-        },
-        feeLevel: "MEDIUM",
-        firstConfirmDate: "2025-08-15T14:46:06Z",
-        networkFee: "0.0001246397138",
-        networkFeeInUSD: "0.25",
-        nfts: [],
-        operation: "Transfer Inbound",
-        refId: "tx125",
-        sourceAddress: "0xca9142d0b9804ef5e239d3bc1c7aa0d1c74e7350",
-        state: "COMPLETED",
-        tokenId: "3",
-        transactionType: "OUTBOUND",
-        txHash: "0xc1d2e3f4a5b67890123456789012345678901234567890123456789012345678901234567890afc3",
-        updateDate: "2025-08-15T14:46:06Z",
-        userId: "user1",
-        walletId: "wallet1"
-      }
-    ];
+  // Mock transaction data - replace with real data from your backend
+  const transactions = [
+    {
+      id: 1,
+      type: 'reward',
+      title: 'ETH reward',
+      date: 'Aug 18, 2025',
+      cadAmount: '+CA$0.02',
+      cryptoAmount: '+0.00000388 ETH',
+      isPositive: true,
+      icon: '🔷',
+      status: 'completed'
+    },
+    {
+      id: 2,
+      type: 'reward',
+      title: 'SOL reward',
+      date: 'Aug 17, 2025',
+      cadAmount: '+CA$0.07',
+      cryptoAmount: '+0.000261 SOL',
+      isPositive: true,
+      icon: '🟣',
+      status: 'completed'
+    },
+    {
+      id: 3,
+      type: 'reward',
+      title: 'ETH reward',
+      date: 'Aug 15, 2025',
+      cadAmount: '+CA$0.02',
+      cryptoAmount: '+0.00000333 ETH',
+      isPositive: true,
+      icon: '🔷',
+      status: 'completed'
+    },
+    {
+      id: 4,
+      type: 'convert',
+      title: 'Converted to ZEC',
+      date: 'Aug 15, 2025',
+      cadAmount: '+CA$8.47',
+      cryptoAmount: '+0.164 ZEC',
+      isPositive: true,
+      icon: '🟡',
+      status: 'completed'
+    },
+    {
+      id: 5,
+      type: 'send',
+      title: 'Sent USDC',
+      date: 'Aug 14, 2025',
+      cadAmount: '-CA$310.30',
+      cryptoAmount: '-224.60 USDC',
+      isPositive: false,
+      icon: '🔵',
+      status: 'completed'
+    },
+    {
+      id: 6,
+      type: 'buy',
+      title: 'Bought USDC',
+      date: 'Aug 14, 2025',
+      cadAmount: '+CA$312.73',
+      cryptoAmount: '+225.25 USDC',
+      isPositive: true,
+      icon: '🔵',
+      status: 'completed'
+    },
+    {
+      id: 7,
+      type: 'sell',
+      title: 'Sold XRP',
+      date: 'Aug 14, 2025',
+      cadAmount: '-CA$80.76',
+      cryptoAmount: '-19.23 XRP',
+      isPositive: false,
+      icon: '⚫',
+      status: 'completed'
+    },
+    {
+      id: 8,
+      type: 'sell',
+      title: 'Sold SOL',
+      date: 'Aug 14, 2025',
+      cadAmount: '-CA$90.43',
+      cryptoAmount: '-0.341 SOL',
+      isPositive: false,
+      icon: '🟣',
+      status: 'completed'
+    },
+    {
+      id: 9,
+      type: 'unstaking',
+      title: 'Unstaking ETH',
+      date: '12 days left',
+      cadAmount: 'CA$186.51',
+      cryptoAmount: '0.0315 ETH',
+      isPositive: false,
+      icon: '🔷',
+      status: 'pending'
+    }
+  ];
 
-    setTransactions(mockTransactions);
-    setLoading(false);
-  }, []);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatAddress = (address: string) => {
-    if (!address) return '';
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const getStateColor = (state: string) => {
-    switch (state.toUpperCase()) {
-      case 'COMPLETED':
-        return 'bg-green-500/20 text-green-500 border-green-500/20';
-      case 'PENDING':
-        return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/20';
-      case 'CANCELLED':
-        return 'bg-red-500/20 text-red-500 border-red-500/20';
-      case 'FAILED':
-        return 'bg-red-500/20 text-red-500 border-red-500/20';
+  const getFilteredTransactions = (filter: string) => {
+    switch (filter) {
+      case 'rewards':
+        return transactions.filter(t => t.type === 'reward');
+      case 'trades':
+        return transactions.filter(t => ['buy', 'sell', 'convert'].includes(t.type));
+      case 'transfers':
+        return transactions.filter(t => ['send', 'receive'].includes(t.type));
+      case 'pending':
+        return transactions.filter(t => t.status === 'pending');
       default:
-        return 'bg-gray-500/20 text-gray-500 border-gray-500/20';
+        return transactions;
     }
   };
 
-  const getStateIcon = (state: string) => {
-    switch (state.toUpperCase()) {
-      case 'COMPLETED':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'PENDING':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'CANCELLED':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'FAILED':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
+  const getTransactionIcon = (transaction: any) => {
+    // You can replace these with actual token icons from your assets
+    const iconMap: { [key: string]: string } = {
+      'ETH': '🔷',
+      'SOL': '🟣',
+      'USDC': '🔵',
+      'ZEC': '🟡',
+      'XRP': '⚫',
+      'TOSHI': '🦊',
+      'CAD': '💰'
+    };
+
+    if (transaction.icon) return transaction.icon;
+    
+    // Extract token from crypto amount
+    const token = transaction.cryptoAmount.split(' ')[1];
+    return iconMap[token] || '💎';
   };
-
-  const getTransactionTypeIcon = (type: string) => {
-    switch (type.toUpperCase()) {
-      case 'INBOUND':
-        return <ArrowDownLeft className="h-4 w-4 text-green-500" />;
-      case 'OUTBOUND':
-        return <ArrowUpRight className="h-4 w-4 text-red-500" />;
-      default:
-        return <ArrowUpRight className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast.success('Copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      toast.error('Failed to copy');
-    }
-  };
-
-  const filteredTransactions = transactions.filter(tx => {
-    const matchesSearch = tx.txHash.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tx.blockchain.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tx.operation.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesFilter = filterType === 'all' || tx.state.toLowerCase() === filterType.toLowerCase();
-
-    return matchesSearch && matchesFilter;
-  });
-
-  if (loading) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background text-foreground">
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-              <p className="text-muted-foreground">Loading transactions...</p>
-            </div>
-          </div>
-        </div>
-      </ProtectedRoute>
-    );
-  }
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground">
-        <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-lg sm:text-xl font-semibold text-white">Transaction History</h1>
-              <p className="text-sm text-muted-foreground">View all your blockchain transactions</p>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+              <p className="text-muted-foreground">Loading...</p>
             </div>
           </div>
-
-          {/* Filters and Search */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by hash, blockchain, or operation..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+        ) : (
+          <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.back()}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">Transaction History</h1>
+                  <p className="text-muted-foreground">View your wallet activity</p>
+                </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={filterType === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterType('all')}
-                className="text-xs sm:text-sm"
-              >
-                All
-              </Button>
-              <Button
-                variant={filterType === 'completed' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterType('completed')}
-                className="text-xs sm:text-sm"
-              >
-                Completed
-              </Button>
-              <Button
-                variant={filterType === 'pending' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterType('pending')}
-                className="text-xs sm:text-sm"
-              >
-                Pending
-              </Button>
-              <Button
-                variant={filterType === 'cancelled' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterType('cancelled')}
-                className="text-xs sm:text-sm"
-              >
-                <span className="hidden sm:inline">Cancelled</span>
-                <span className="sm:hidden">Cancel</span>
-              </Button>
-            </div>
+
+            {/* Tabs */}
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="rewards">Rewards</TabsTrigger>
+                <TabsTrigger value="trades">Trades</TabsTrigger>
+                <TabsTrigger value="transfers">Transfers</TabsTrigger>
+                <TabsTrigger value="pending">Pending</TabsTrigger>
+              </TabsList>
+
+                             <TabsContent value="all" className="space-y-2 mt-6">
+                 {getFilteredTransactions('all').map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/20 transition-colors"
+                  >
+                    {/* Transaction Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-muted/20 border border-border flex items-center justify-center text-lg">
+                        {getTransactionIcon(transaction)}
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-white truncate">
+                            {transaction.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.date}
+                          </p>
+                        </div>
+                        
+                        {/* Amounts */}
+                        <div className="text-right ml-4">
+                          <div className={`font-medium ${
+                            transaction.isPositive ? 'text-green-500' : 'text-white'
+                          }`}>
+                            {transaction.cadAmount}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {transaction.cryptoAmount}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+               </TabsContent>
+
+               <TabsContent value="rewards" className="space-y-2 mt-6">
+                 {getFilteredTransactions('rewards').map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/20 transition-colors"
+                  >
+                    {/* Transaction Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-muted/20 border border-border flex items-center justify-center text-lg">
+                        {getTransactionIcon(transaction)}
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-white truncate">
+                            {transaction.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.date}
+                          </p>
+                        </div>
+                        
+                        {/* Amounts */}
+                        <div className="text-right ml-4">
+                          <div className={`font-medium ${
+                            transaction.isPositive ? 'text-green-500' : 'text-white'
+                          }`}>
+                            {transaction.cadAmount}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {transaction.cryptoAmount}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+               </TabsContent>
+
+               <TabsContent value="trades" className="space-y-2 mt-6">
+                 {getFilteredTransactions('trades').map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/20 transition-colors"
+                  >
+                    {/* Transaction Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-muted/20 border border-border flex items-center justify-center text-lg">
+                        {getTransactionIcon(transaction)}
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-white truncate">
+                            {transaction.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.date}
+                          </p>
+                        </div>
+                        
+                        {/* Amounts */}
+                        <div className="text-right ml-4">
+                          <div className={`font-medium ${
+                            transaction.isPositive ? 'text-green-500' : 'text-white'
+                          }`}>
+                            {transaction.cadAmount}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {transaction.cryptoAmount}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+               </TabsContent>
+
+               <TabsContent value="transfers" className="space-y-2 mt-6">
+                 {getFilteredTransactions('transfers').map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/20 transition-colors"
+                  >
+                    {/* Transaction Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-muted/20 border border-border flex items-center justify-center text-lg">
+                        {getTransactionIcon(transaction)}
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-white truncate">
+                            {transaction.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.date}
+                          </p>
+                        </div>
+                        
+                        {/* Amounts */}
+                        <div className="text-right ml-4">
+                          <div className={`font-medium ${
+                            transaction.isPositive ? 'text-green-500' : 'text-white'
+                          }`}>
+                            {transaction.cadAmount}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {transaction.cryptoAmount}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+               </TabsContent>
+
+               <TabsContent value="pending" className="space-y-2 mt-6">
+                 {getFilteredTransactions('pending').map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/20 transition-colors"
+                  >
+                    {/* Transaction Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-muted/20 border border-border flex items-center justify-center text-lg">
+                        {getTransactionIcon(transaction)}
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-white truncate">
+                            {transaction.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.date}
+                          </p>
+                        </div>
+                        
+                        {/* Amounts */}
+                        <div className="text-right ml-4">
+                          <div className={`font-medium ${
+                            transaction.isPositive ? 'text-green-500' : 'text-white'
+                          }`}>
+                            {transaction.cadAmount}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {transaction.cryptoAmount}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+               </TabsContent>
+             </Tabs>
+
+            {/* Empty States for each tab */}
+            <TabsContent value="all" className="mt-6">
+              {getFilteredTransactions('all').length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">📊</div>
+                  <h3 className="text-lg font-medium text-white mb-2">No transactions found</h3>
+                  <p className="text-muted-foreground">Your transaction history will appear here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="rewards" className="mt-6">
+              {getFilteredTransactions('rewards').length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">🎁</div>
+                  <h3 className="text-lg font-medium text-white mb-2">No rewards found</h3>
+                  <p className="text-muted-foreground">Your reward transactions will appear here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="trades" className="mt-6">
+              {getFilteredTransactions('trades').length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">📈</div>
+                  <h3 className="text-lg font-medium text-white mb-2">No trades found</h3>
+                  <p className="text-muted-foreground">Your trading activity will appear here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="transfers" className="mt-6">
+              {getFilteredTransactions('transfers').length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">💸</div>
+                  <h3 className="text-lg font-medium text-white mb-2">No transfers found</h3>
+                  <p className="text-muted-foreground">Your transfer transactions will appear here</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="pending" className="mt-6">
+              {getFilteredTransactions('pending').length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">⏳</div>
+                  <h3 className="text-lg font-medium text-white mb-2">No pending transactions</h3>
+                  <p className="text-muted-foreground">Your pending transactions will appear here</p>
+                </div>
+              )}
+            </TabsContent>
           </div>
-
-          {/* Transactions Table */}
-          <div className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/20 border-b border-border">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"></th>
-                    <th className="hidden sm:table-cell px-4 py-3 text-left text-sm font-medium text-muted-foreground">TX Hash</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">State</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredTransactions.length > 0 ? (
-                    filteredTransactions.map((tx) => (
-                      <tr
-                        key={tx.id}
-                        className="hover:bg-muted/10 transition-colors cursor-pointer group"
-                        onClick={() => router.push(`/transactions/${tx.id}`)}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            {getTransactionTypeIcon(tx.transactionType)}
-                          </div>
-                        </td>
-
-                        <td className="hidden sm:table-cell px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm">{formatAddress(tx.txHash)}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(tx.txHash)}
-                              className="h-4 w-4 p-0 hover:bg-muted/20"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-
-                            <span className="text-sm font-medium">
-                              {tx.amounts.join(', ')}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            {getStateIcon(tx.state)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm">
-                            <div className="font-medium">{new Date(tx.createDate).toLocaleDateString()}</div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground sm:col-span-7">
-                        <p>No transactions found</p>
-                        <p className="text-sm mt-2">Your transaction history will appear here</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </ProtectedRoute>
   );
