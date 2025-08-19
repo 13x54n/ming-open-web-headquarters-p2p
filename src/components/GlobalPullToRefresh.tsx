@@ -1,46 +1,55 @@
 'use client';
 
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { PullToRefresh } from './PullToRefresh';
+import PullToRefresh from 'react-simple-pull-to-refresh';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 interface GlobalPullToRefreshProps {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }
 
 export function GlobalPullToRefresh({ children }: GlobalPullToRefreshProps) {
-  const { isRefreshing, pullDistance } = usePullToRefresh({
-    onRefresh: async () => {
-      // Global refresh - try to refresh data first, then fallback to page reload
-      try {
-        // Try to refresh any active contexts or data
-        if (typeof window !== 'undefined') {
-          // Dispatch a custom event that other components can listen to
-          window.dispatchEvent(new CustomEvent('app:refresh'));
-          
-          // Wait a bit for components to handle the refresh
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // If we're on a page that can benefit from a soft refresh, don't reload
-          const currentPath = window.location.pathname;
-          if (currentPath === '/wallet' || currentPath === '/transactions' || currentPath === '/dashboard') {
-            // These pages can benefit from data refresh without full page reload
-            return;
-          }
-        }
-        
-        // Fallback to page reload for other pages
-        window.location.reload();
-      } catch (error) {
-        // If anything fails, just reload the page
-        window.location.reload();
-      }
-    }
-  });
+	const handleRefresh = async () => {
+		try {
+			if (typeof window !== 'undefined') {
+				// Notify pages/contexts to refresh their data
+				window.dispatchEvent(new CustomEvent('app:refresh'));
+				// Give listeners time to finish their work
+				await new Promise(resolve => setTimeout(resolve, 800));
 
-  return (
-    <>
-      <PullToRefresh isRefreshing={isRefreshing} pullDistance={pullDistance} />
-      {children}
-    </>
-  );
+				const currentPath = window.location.pathname;
+				// Avoid full reload on pages that can soft-refresh
+				if (currentPath === '/wallet' || currentPath === '/transactions' || currentPath === '/dashboard') {
+					return;
+				}
+			}
+			// Fallback to a full reload elsewhere
+			window.location.reload();
+		} catch {
+			window.location.reload();
+		}
+	};
+
+	return (
+		<PullToRefresh
+			onRefresh={handleRefresh}
+			pullDownThreshold={45}
+			maxPullDownDistance={140}
+			resistance={0.65}
+			backgroundColor="transparent"
+			pullingContent={(
+				<div className="flex items-center justify-center gap-2 py-2 text-primary">
+					<RefreshCw className="w-4 h-4 animate-pulse" />
+					<span className="text-sm">Pull down to refresh</span>
+				</div>
+			)}
+			refreshingContent={(
+				<div className="flex items-center justify-center gap-2 py-2 text-primary">
+					<Loader2 className="w-4 h-4 animate-spin" />
+					<span className="text-sm">Refreshing...</span>
+				</div>
+			)}
+		>
+			{children}
+		</PullToRefresh>
+	);
 }
