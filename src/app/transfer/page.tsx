@@ -227,6 +227,8 @@ export default function TransferPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="0.00"
                   value={transferData.amount}
                   onChange={(e) => setTransferData(prev => ({ ...prev, amount: e.target.value }))}
@@ -312,7 +314,9 @@ export default function TransferPage() {
                   className="w-12 h-12 md:w-14 md:h-14 border-2 border-accent rounded-lg flex items-center justify-center bg-background"
                 >
                   <input
-                    type="text"
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     maxLength={1}
                     value={transferData.securityCode[index] || ''}
                     onChange={(e) => {
