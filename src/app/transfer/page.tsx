@@ -221,11 +221,16 @@ export default function TransferPage() {
 
         {/* Amount and Memo Section */}
         {selectedTokenIndex >= 0 && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
             <div className="space-y-2">
               <Label className="text-sm md:text-base">Amount to Transfer</Label>
               <div className="flex items-center gap-2">
                 <input
+                  ref={(el) => {
+                    if (el && selectedTokenIndex >= 0) {
+                      setTimeout(() => el.focus(), 100);
+                    }
+                  }}
                   type="number"
                   inputMode="decimal"
                   pattern="[0-9]*\.?[0-9]*"
