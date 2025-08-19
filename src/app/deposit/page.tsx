@@ -175,6 +175,14 @@ export default function DepositPage() {
                       >
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setQrCodeOpen(true)}
+                        className="shrink-0"
+                      >
+                        <QrCode className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -182,7 +190,7 @@ export default function DepositPage() {
                 <div className="p-4 bg-muted/20 border border-border rounded-lg">
                   <h3 className="font-medium mb-2">How it works:</h3>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Share your User ID with friends</li>
+                    <li>• Share your User ID or email with friends</li>
                     <li>• They can send you funds instantly from their Ming wallet</li>
                     <li>• No network fees or waiting times</li>
                     <li>• Funds appear immediately in your account</li>
@@ -332,34 +340,36 @@ export default function DepositPage() {
         )}
       </div>
 
-      {/* QR Code Modal */}
+            {/* QR Code Modal */}
       <Dialog open={qrCodeOpen} onOpenChange={setQrCodeOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5" />
+              {depositMethod === 'ming' ? 'User ID QR Code' : 'Wallet Address QR Code'}
             </DialogTitle>
           </DialogHeader>
-
+          
           <div className="space-y-4">
-            {selectedChain && chainOptions.find(c => c.id === selectedChain)?.hasWallet && (
+            {depositMethod === 'ming' ? (
+              // User ID QR Code
               <>
                 <div className="flex flex-col items-center space-y-4">
                   <div className="p-4 bg-white rounded-lg">
                     <QRCodeSVG
-                      value={chainOptions.find(c => c.id === selectedChain)?.walletAddress || ''}
+                      value={userData?.uid || ''}
                       size={200}
                       level="M"
                       includeMargin={false}
                     />
                   </div>
-
+                  
                   <div className="text-center space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      Scan this QR code with your wallet app to get the address
+                      Scan this QR code to get your User ID
                     </p>
                     <div className="text-xs text-muted-foreground font-mono">
-                      {chainOptions.find(c => c.id === selectedChain)?.name} ({chainOptions.find(c => c.id === selectedChain)?.symbol})
+                      User ID: {userData?.uid || ''}
                     </div>
                   </div>
                 </div>
@@ -368,10 +378,10 @@ export default function DepositPage() {
                   <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={() => copyToClipboard(chainOptions.find(c => c.id === selectedChain)?.walletAddress || '')}
+                    onClick={() => copyToClipboard(userData?.uid || '')}
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    Copy Address
+                    Copy User ID
                   </Button>
                   <Button
                     className="flex-1"
@@ -381,6 +391,48 @@ export default function DepositPage() {
                   </Button>
                 </div>
               </>
+            ) : (
+              // Wallet Address QR Code
+              selectedChain && chainOptions.find(c => c.id === selectedChain)?.hasWallet && (
+                <>
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="p-4 bg-white rounded-lg">
+                      <QRCodeSVG
+                        value={chainOptions.find(c => c.id === selectedChain)?.walletAddress || ''}
+                        size={200}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                    
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Scan this QR code with your wallet app to get the address
+                      </p>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {chainOptions.find(c => c.id === selectedChain)?.name} ({chainOptions.find(c => c.id === selectedChain)?.symbol})
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => copyToClipboard(chainOptions.find(c => c.id === selectedChain)?.walletAddress || '')}
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      Copy Address
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={() => setQrCodeOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </>
+              )
             )}
           </div>
         </DialogContent>
