@@ -1,6 +1,6 @@
 'use client';
 
-import PullToRefresh from 'react-simple-pull-to-refresh';
+import { usePullToRefresh } from 'use-pull-to-refresh';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 interface GlobalPullToRefreshProps {
@@ -29,27 +29,42 @@ export function GlobalPullToRefresh({ children }: GlobalPullToRefreshProps) {
 		}
 	};
 
+	const { isRefreshing, pullPosition } = usePullToRefresh({
+		onRefresh: handleRefresh,
+		maximumPullLength: 100,
+		refreshThreshold: 50,
+		isDisabled: false
+	});
+
 	return (
-		<PullToRefresh
-			onRefresh={handleRefresh}
-			pullDownThreshold={70}
-			maxPullDownDistance={200}
-			resistance={1}
-			backgroundColor="transparent"
-			pullingContent={(
-				<div className="flex items-center justify-center gap-2 py-2 text-primary">
-					<RefreshCw className="w-4 h-4 animate-pulse" />
-					<span className="text-sm">Pull down to refresh</span>
+		<>
+			{/* Pull to refresh indicator */}
+			<div
+				style={{
+					top: (isRefreshing ? 70 : pullPosition) / 3,
+					opacity: isRefreshing || pullPosition > 0 ? 1 : 0
+				}}
+				className="fixed inset-x-1/2 z-150 h-12 w-12 -translate-x-1/2 rounded-full bg-primary/10 backdrop-blur-sm border border-primary/20 flex items-center justify-center shadow-lg transition-all duration-200"
+			>
+				<div
+					className={`h-6 w-6 text-primary transition-all duration-200 ${
+						isRefreshing ? 'animate-spin' : ''
+					}`}
+					style={
+						!isRefreshing
+							? { transform: `rotate(${Math.min(pullPosition * 2, 180)}deg)` }
+							: {}
+					}
+				>
+					{isRefreshing ? (
+						<Loader2 className="h-6 w-6" />
+					) : (
+						<RefreshCw className="h-6 w-6" />
+					)}
 				</div>
-			)}
-			refreshingContent={(
-				<div className="flex items-center justify-center gap-2 py-2 text-primary">
-					<Loader2 className="w-4 h-4 animate-spin" />
-					<span className="text-sm">Refreshing...</span>
-				</div>
-			)}
-		>
+			</div>
+
 			{children}
-		</PullToRefresh>
+		</>
 	);
 }
