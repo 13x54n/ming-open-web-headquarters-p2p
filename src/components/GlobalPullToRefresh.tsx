@@ -32,9 +32,9 @@ export function GlobalPullToRefresh({ children }: GlobalPullToRefreshProps) {
 	return (
 		<PullToRefresh
 			onRefresh={handleRefresh}
-			pullDownThreshold={45}
-			maxPullDownDistance={140}
-			resistance={0.65}
+			pullDownThreshold={70}
+			maxPullDownDistance={200}
+			resistance={1}
 			backgroundColor="transparent"
 			pullingContent={(
 				<div className="flex items-center justify-center gap-2 py-2 text-primary">
