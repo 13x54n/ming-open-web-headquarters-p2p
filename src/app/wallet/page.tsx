@@ -125,7 +125,7 @@ export default function WalletPage() {
               <div className="flex gap-2 sm:gap-3">
                 <Button
                   variant="outline"
-                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm outline-green-400 hover:bg-green-600 hover:text-green-100 text-green-400"
                   onClick={() => router.push('/deposit')}
                 >
                   <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -135,7 +135,7 @@ export default function WalletPage() {
 
                 <Button
                   variant="outline"
-                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm outline-red-400 hover:bg-red-600 hover:text-red-100 text-red-400"
                   onClick={() => router.push('/transfer')}
                 >
                   <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -145,7 +145,7 @@ export default function WalletPage() {
 
                 <Button
                   variant="outline"
-                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                  className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm outline-blue-400 hover:bg-blue-600 hover:text-blue-100 text-blue-400"
                   onClick={refreshBalances}
                   disabled={balancesLoading}
                 >

@@ -227,13 +227,13 @@ export default function TransferPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*\.?[0-9]*"// pattern can have decimals
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
                   placeholder="0.00"
                   value={transferData.amount}
                   onChange={(e) => setTransferData(prev => ({ ...prev, amount: e.target.value }))}
                   step="0.000001"
-                  className="h-10 md:h-11 text-sm md:text-base border-0 bg-transparent p-0 focus:border-0 focus:outline-0 flex-1 border border-accent rounded-md px-3"
+                  className="h-10 md:h-11 text-sm md:text-base bg-transparent p-0 focus:outline-none flex-1 border-2 border-accent rounded-md px-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <Button variant="outline" className="h-10 md:h-11 text-sm md:text-base" onClick={handleMaxAmount}>
                   Max
@@ -411,13 +411,13 @@ export default function TransferPage() {
     </div>
   );
 
-
-
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1: return renderStep1();
       case 2: return renderStep2(); // Transfer summary with security code
-      case 3: return transferStatus === 'success' ? renderStep5() : renderStep6(); // Success or failure
+      case 3:
+        // Success or failure
+        return transferStatus === 'success' ? renderStep5() : renderStep6();
       default: return renderStep1();
     }
   };
