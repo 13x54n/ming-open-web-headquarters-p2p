@@ -228,7 +228,7 @@ export default function TransferPage() {
                 <input
                   type="number"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  pattern="[0-9]*\.?[0-9]*"// pattern can have decimals
                   placeholder="0.00"
                   value={transferData.amount}
                   onChange={(e) => setTransferData(prev => ({ ...prev, amount: e.target.value }))}
