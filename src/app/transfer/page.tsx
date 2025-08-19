@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,10 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Wallet, User, Mail, Hash, Scan, SearchIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Wallet, User, Mail, Hash, Scan, SearchIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTokenBalance } from '@/contexts/TokenBalanceContext';
+import { transferApi, TransferRequest } from '@/lib/api';
 import Link from 'next/link';
+import jsQR from 'jsqr';
 
 interface TransferData {
   recipient: string;
@@ -23,13 +25,7 @@ interface TransferData {
   securityCode: string;
 }
 
-interface Contact {
-  id: string;
-  name: string;
-  email?: string;
-  uid?: string;
-  walletAddress?: string;
-}
+
 
 export default function TransferPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -44,6 +40,11 @@ export default function TransferPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [transferStatus, setTransferStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [selectedTokenIndex, setSelectedTokenIndex] = useState<number>(-1);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [scanningError, setScanningError] = useState<string>('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const router = useRouter();
   const { tokenBalances, isLoading: balancesLoading, refreshBalances } = useTokenBalance();
@@ -59,11 +60,7 @@ export default function TransferPage() {
     blockchain: token.blockchain
   }));
 
-  const contacts: Contact[] = [
-    { id: '1', name: 'Babe', email: 'mingmashrp444@gmail.com' },
-    { id: '2', name: 'Sagar Dai', uid: 'umk9wR7HQpbhQI39JJ2c0gcRYvg2' },
-    { id: '3', name: 'EthGlobal Wallet', walletAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6' }
-  ];
+
 
   // Refresh balances when component mounts
   useEffect(() => {
@@ -82,27 +79,7 @@ export default function TransferPage() {
     }
   };
 
-  const handleRecipientSelect = (contact: Contact) => {
-    let recipientType: 'email' | 'uid' | 'wallet' = 'email';
-    let recipient = '';
 
-    if (contact.email) {
-      recipientType = 'email';
-      recipient = contact.email;
-    } else if (contact.uid) {
-      recipientType = 'uid';
-      recipient = contact.uid;
-    } else if (contact.walletAddress) {
-      recipientType = 'wallet';
-      recipient = contact.walletAddress;
-    }
-
-    setTransferData(prev => ({
-      ...prev,
-      recipient,
-      recipientType
-    }));
-  };
 
   const handleTokenSelect = (index: number) => {
     setSelectedTokenIndex(index);
@@ -122,17 +99,137 @@ export default function TransferPage() {
     setTransferData(prev => ({ ...prev, securityCode: numericValue }));
   };
 
+  const handleQRScan = () => {
+    setShowQRScanner(true);
+    setScanningError('');
+  };
+
+  const handleQRScanResult = (result: string) => {
+    try {
+      // Try to parse the QR code result
+      // It could be a direct address, email, or UID
+      setTransferData(prev => ({ ...prev, recipient: result }));
+      setShowQRScanner(false);
+      setScanningError('');
+    } catch (error) {
+      setScanningError('Invalid QR code format');
+    }
+  };
+
+  const handleQRScanError = (error: string) => {
+    setScanningError(error);
+  };
+
+  const closeQRScanner = () => {
+    setShowQRScanner(false);
+    setScanningError('');
+    stopCamera();
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+      }
+    } catch (error) {
+      setScanningError('Camera access denied. Please allow camera permissions.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // Start camera when QR scanner opens
+  useEffect(() => {
+    if (showQRScanner) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [showQRScanner]);
+
+  // QR Code detection loop
+  useEffect(() => {
+    if (!showQRScanner || !videoRef.current || !canvasRef.current) return;
+
+    const detectQR = () => {
+      if (videoRef.current && videoRef.current.videoWidth > 0) {
+        const canvas = canvasRef.current!;
+        const video = videoRef.current;
+        const context = canvas.getContext('2d');
+
+        if (context && video.videoWidth > 0) {
+          // Set canvas dimensions to match video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          // Draw current video frame to canvas
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Get image data for QR detection
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+          // Use jsQR to detect QR code
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          });
+
+          if (code) {
+            // QR code detected!
+            console.log('QR Code detected:', code.data);
+            handleQRScanResult(code.data);
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(detectQR, 100); // Check every 100ms
+    return () => clearInterval(interval);
+  }, [showQRScanner]);
+
   const handleTransfer = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Prepare transfer data for API
+      const transferRequest: TransferRequest = {
+        recipient: transferData.recipient,
+        amount: parseFloat(transferData.amount),
+        token: transferData.token,
+        memo: transferData.memo,
+        securityCode: transferData.securityCode
+      };
 
-      // Random success/failure for demo
-      const success = Math.random() > 0.3;
-      setTransferStatus(success ? 'success' : 'failed');
+      // Call the backend API
+      const response = await transferApi.createTransfer(transferRequest);
+
+      if (response.success && response.data) {
+        setTransferStatus('success');
+        // Refresh balances after successful transfer
+        refreshBalances();
+      } else {
+        setTransferStatus('failed');
+        console.error('Transfer failed:', response.message);
+      }
+
       handleNext();
     } catch (error) {
+      console.error('Transfer error:', error);
       setTransferStatus('failed');
       handleNext();
     } finally {
@@ -159,59 +256,44 @@ export default function TransferPage() {
               onChange={(e) => setTransferData(prev => ({ ...prev, recipient: e.target.value }))}
               className="flex-1 border-0 bg-transparent p-0 h-10 md:h-11 focus:border-0 focus:outline-0 text-sm md:text-base"
             />
-            <Button variant="ghost" className="p-0 h-10 md:h-11 cursor-pointer">
+            <Button
+              variant="ghost"
+              className="p-0 h-10 md:h-11 cursor-pointer"
+              onClick={handleQRScan}
+            >
               <Scan className="w-4 h-4 text-muted-foreground" />
             </Button>
           </div>
 
-          {/* Quick Contacts */}
-          <div className="space-y-2">
-            {contacts.map((contact) => (
-              <div
-                key={contact.id}
-                onClick={() => handleRecipientSelect(contact)}
-                className="w-full flex items-center gap-4 justify-start text-sm md:text-base py-2.5 cursor-pointer hover:bg-accent rounded-md transition-all duration-300 px-4"
-              >
-                <Wallet className="w-4 h-4 mr-2" />
-                <div className="flex flex-col">
-                  <p className="text-base">{contact.name}</p>
-                  <p className="text-sm text-muted-foreground">{contact.email || contact.uid || contact.walletAddress?.slice(0, 8) + '...'}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+
         </div>
 
         {/* Token Selection Section */}
         <div className="space-y-3">
           <Label className="text-lg font-medium">Select asset to send</Label>
-          <div className="flex items-center gap-2 border border-accent rounded-md p-1 px-3 mb-3">
-            <SearchIcon className='h-4 w-4' />
-            <input type="text" placeholder="Search tokens" className="w-full h-10 md:h-11 text-sm md:text-base border-0 bg-transparent p-0 focus:border-0 focus:outline-0" />
-          </div>
 
           <div className="space-y-2">
             {availableTokens.map((token, index) => (
               <div
                 key={token.symbol}
                 onClick={() => handleTokenSelect(index)}
-                className={`flex items-center justify-between gap-1 h-auto py-3 md:py-4 px-3 rounded-md cursor-pointer transition-all duration-200 ${selectedTokenIndex === index ? 'bg-accent border border-primary' : 'hover:bg-accent/50'
+                className={`flex items-center justify-between gap-1 h-auto py-3 md:py-4 px-4 rounded-md cursor-pointer transition-all duration-200 ${selectedTokenIndex === index ? 'bg-accent border border-green-400' : 'hover:bg-accent/50'
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <img src={token.icon} alt={token.symbol} className="w-8 h-8 rounded-full" />
+                  <img src={token.icon} alt={token.symbol} className="w-6 h-6 rounded-full" />
                   <div>
-                    <p className="text-sm md:text-base font-medium">{token.name}</p>
-                    <p className="text-sm md:text-base text-muted-foreground font-medium">{token.symbol}</p>
+                    <p className="text-sm font-medium">{token.name}</p>
+                    <p className="text-sm text-muted-foreground font-medium">{token.symbol}</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs md:text-sm text-foreground">${token.price.toFixed(2)}</span>
+                    <span className="text-sm text-foreground">${token.price.toFixed(2)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs md:text-sm text-muted-foreground">{token.balance}</span>
-                    <span className="text-xs md:text-sm text-muted-foreground">{token.symbol}</span>
+                    <span className="text-sm text-muted-foreground">{token.balance}</span>
+                    <span className="text-xs text-muted-foreground">{token.symbol}</span>
                   </div>
                 </div>
               </div>
@@ -222,9 +304,10 @@ export default function TransferPage() {
         {/* Amount and Memo Section */}
         {selectedTokenIndex >= 0 && (
           <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
+            <Separator />
             <div className="space-y-2">
               <Label className="text-sm md:text-base">Amount to Transfer</Label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 border-2 border-accent rounded-md p-1 px-3 focus-within:border-green-400">
                 <input
                   ref={(el) => {
                     if (el && selectedTokenIndex >= 0) {
@@ -237,10 +320,11 @@ export default function TransferPage() {
                   placeholder="0.00"
                   value={transferData.amount}
                   onChange={(e) => setTransferData(prev => ({ ...prev, amount: e.target.value }))}
+                  onWheel={(e) => e.currentTarget.blur()}
                   step="0.000001"
-                  className="h-10 md:h-11 text-sm md:text-base bg-transparent p-0 focus:outline-none flex-1 border-2 border-accent rounded-md px-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="h-10 md:h-11 text-xl bg-transparent p-0 focus:outline-none flex-1 rounded-md px-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-moz-appearance]:textfield"
                 />
-                <Button variant="outline" className="h-10 md:h-11 text-sm md:text-base" onClick={handleMaxAmount}>
+                <Button variant="ghost" className="h-10 md:h-11 text-sm md:text-base" onClick={handleMaxAmount}>
                   Max
                 </Button>
               </div>
@@ -339,19 +423,26 @@ export default function TransferPage() {
                       }
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Backspace' && !transferData.securityCode[index] && index > 0) {
-                        // Move to previous input on backspace if current is empty
-                        const prevInput = (e.target as HTMLInputElement).parentElement?.previousElementSibling?.querySelector('input');
-                        if (prevInput) prevInput.focus();
+                      if (e.key === 'Backspace') {
+                        if (transferData.securityCode[index]) {
+                          // If current input has a value, clear it first
+                          const newCode = transferData.securityCode.split('');
+                          newCode[index] = '';
+                          handleSecurityCodeChange(newCode.join(''));
+                        } else if (index > 0) {
+                          // If current input is empty and not first, move to previous
+                          const prevInput = (e.target as HTMLInputElement).parentElement?.previousElementSibling?.querySelector('input');
+                          if (prevInput) prevInput.focus();
+                        }
                       }
                     }}
-                    className="w-full h-full text-center text-lg md:text-xl font-bold border-0 bg-transparent focus:outline-none focus:ring-0"
+                    className="w-full h-full text-center text-lg md:text-xl font-bold border-0 bg-transparent focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-moz-appearance]:textfield"
                     placeholder="0"
                   />
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground text-center">Enter your 6-digit security code</p>
+            <p className="text-xs text-muted-foreground text-center">Security code is sent to your email.</p>
           </div>
 
           <div className="flex gap-2">
@@ -362,7 +453,7 @@ export default function TransferPage() {
             <Button
               onClick={handleTransfer}
               disabled={isLoading || transferData.securityCode.length !== 6}
-              className="flex-1 h-10 md:h-11 text-sm md:text-base"
+              className="flex-1 h-10 md:h-11 text-sm md:text-base bg-green-400 hover:bg-green-500 cursor-pointer"
             >
               {isLoading ? 'Processing...' : 'Confirm Transfer'}
             </Button>
@@ -427,6 +518,66 @@ export default function TransferPage() {
     }
   };
 
+  const renderQRScanner = () => {
+    if (!showQRScanner) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div className="bg-background rounded-lg p-6 max-w-md w-full">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Scan QR Code</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={closeQRScanner}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-muted rounded-lg p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                Point your camera at a QR code
+              </p>
+              <div className="w-64 h-64 mx-auto bg-background border-2 border-dashed border-accent rounded-lg overflow-hidden relative">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="hidden"
+                />
+                <div className="absolute inset-0 border-2 border-green-400 border-dashed pointer-events-none" />
+              </div>
+            </div>
+
+            {scanningError && (
+              <div className="text-sm text-red-500 text-center">
+                {scanningError}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={closeQRScanner}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (balancesLoading) {
     return (
       <ProtectedRoute>
@@ -442,7 +593,8 @@ export default function TransferPage() {
   return (
     <ProtectedRoute>
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
-        {renderCurrentStep()}
+                {renderCurrentStep()}
+        {renderQRScanner()}
       </div>
     </ProtectedRoute>
   );

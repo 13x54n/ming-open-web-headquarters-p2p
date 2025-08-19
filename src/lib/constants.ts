@@ -119,6 +119,10 @@ export const getCryptocurrencyBySymbol = (symbol: string) => {
   return CRYPTOCURRENCIES.find(crypto => crypto.symbol === symbol);
 };
 
+// Backend API configuration
+export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+export const API_BASE_URL = `${BACKEND_URL}/api`;
+
 // Type definitions
 export type PaymentMethodId = typeof PAYMENT_METHODS[number]['id'];
 export type CurrencyCode = typeof CURRENCIES[number]['code'];
