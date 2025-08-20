@@ -116,14 +116,18 @@ export default function TransferPage() {
         return 'Invalid format for internal user. Use email, UID, or wallet address.';
       }
     } else {
-      // For external wallets, only accept valid wallet addresses
-      const isValidExternal =
-        /^0x[a-fA-F0-9]{40}$/.test(recipient) || // Ethereum wallet address
-        /^[a-zA-Z0-9]{26,35}$/.test(recipient) || // Bitcoin-style addresses
-        /^[a-zA-Z0-9]{32,44}$/.test(recipient); // Other crypto addresses
+      // For external wallets, ONLY accept valid wallet addresses - no emails or UIDs
+      const isValidEthereum = /^0x[a-fA-F0-9]{40}$/.test(recipient); // Ethereum wallet address
+      const isValidBitcoin = /^[a-zA-Z0-9]{26,35}$/.test(recipient); // Bitcoin-style addresses
+      const isValidOther = /^[a-zA-Z0-9]{32,44}$/.test(recipient); // Other crypto addresses
 
-      if (!isValidExternal) {
-        return 'Invalid wallet address format for external transfer.';
+      if (!isValidEthereum && !isValidBitcoin && !isValidOther) {
+        return 'External transfers require a valid wallet address. Emails and UIDs are not accepted for external wallets.';
+      }
+
+      // Additional validation for external wallets
+      if (recipient.includes('@') || recipient.includes('_') || recipient.includes('-')) {
+        return 'External wallet addresses cannot contain @, _, or - characters. Please enter a valid cryptocurrency wallet address.';
       }
     }
 
@@ -263,14 +267,33 @@ export default function TransferPage() {
         senderId: currentUser.uid // Add senderId to the request
       };
 
+      console.log('Requesting security code with data:', requestData);
+
       const response = await transferApi.requestSecurityCode(requestData);
+
+      console.log('API response received:', response);
+      console.log('Response success:', response.success);
+      console.log('Response data:', response.data);
 
       if (response.success && response.data) {
         setTransferId(response.data.transferId);
         setSecurityCodeSent(true);
+        
+        console.log('Security code requested successfully, moving to step 2');
+        console.log('Current step before change:', currentStep);
+        
         // Immediately move to security code page - don't wait for email
         setCurrentStep(2);
-        console.log('Security code requested successfully, proceeding to input page');
+        
+        console.log('Step change initiated. New step should be 2');
+        
+        // Fallback: force step change after a short delay if needed
+        setTimeout(() => {
+          if (currentStep !== 2) {
+            console.log('Step change failed, forcing to step 2');
+            setCurrentStep(2);
+          }
+        }, 100);
       } else {
         console.error('Failed to request security code:', response.message);
         // Show error message to user
@@ -303,7 +326,18 @@ export default function TransferPage() {
             <Button
               variant={transferData.recipientType === 'internal' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setTransferData(prev => ({ ...prev, recipientType: 'internal' }))}
+              onClick={() => {
+                // Clear recipient if switching to internal and current recipient is a wallet address
+                if (transferData.recipientType === 'external' && transferData.recipient) {
+                  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/.test(transferData.recipient) || 
+                                        /^[a-zA-Z0-9]{26,35}$/.test(transferData.recipient) || 
+                                        /^[a-zA-Z0-9]{32,44}$/.test(transferData.recipient);
+                  if (!isWalletAddress) {
+                    setTransferData(prev => ({ ...prev, recipient: '' }));
+                  }
+                }
+                setTransferData(prev => ({ ...prev, recipientType: 'internal' }));
+              }}
               className="flex-1"
             >
               <User className="w-4 h-4 mr-2" />
@@ -312,7 +346,19 @@ export default function TransferPage() {
             <Button
               variant={transferData.recipientType === 'external' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setTransferData(prev => ({ ...prev, recipientType: 'external' }))}
+              onClick={() => {
+                // Clear recipient if switching to external and current recipient is not a wallet address
+                if (transferData.recipientType === 'internal' && transferData.recipient) {
+                  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/.test(transferData.recipient) || 
+                                        /^[a-zA-Z0-9]{26,35}$/.test(transferData.recipient) || 
+                                        /^[a-zA-Z0-9]{32,44}$/.test(transferData.recipient);
+                  if (!isWalletAddress) {
+                    setTransferData(prev => ({ ...prev, recipient: '' }));
+                    toast.success('Recipient cleared - external wallets only accept wallet addresses');
+                  }
+                }
+                setTransferData(prev => ({ ...prev, recipientType: 'external' }));
+              }}
               className="flex-1"
             >
               <Wallet className="w-4 h-4 mr-2" />
@@ -325,7 +371,7 @@ export default function TransferPage() {
               placeholder={
                 transferData.recipientType === 'internal'
                   ? "Email, UID, or wallet address"
-                  : "External wallet address (0x...)"
+                  : "Wallet address only (0x... or similar)"
               }
               value={transferData.recipient}
               onChange={(e) => setTransferData(prev => ({ ...prev, recipient: e.target.value }))}
@@ -348,6 +394,14 @@ export default function TransferPage() {
             </div>
           )}
 
+          {/* Real-time validation hint for external wallets */}
+          {transferData.recipientType === 'external' && transferData.recipient && !validateRecipient() && (
+            <div className="text-sm text-green-600 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Valid wallet address format
+            </div>
+          )}
+
           {/* Transfer Type Info */}
           <div className="text-sm text-muted-foreground">
             {transferData.recipientType === 'internal' ? (
@@ -358,7 +412,7 @@ export default function TransferPage() {
             ) : (
               <div className="flex items-center gap-2">
                 <Wallet className="w-4 h-4" />
-                <span>Send to external wallet addresses (may incur network fees)</span>
+                <span>Send to external wallet addresses only (no emails or UIDs)</span>
               </div>
             )}
           </div>
@@ -685,14 +739,30 @@ export default function TransferPage() {
     </div>
   );
 
+  // Debug logging to help troubleshoot
+  console.log('Current step:', currentStep, 'Transfer status:', transferStatus, 'Security code sent:', securityCodeSent);
+
+  // Monitor step changes
+  useEffect(() => {
+    console.log('Step changed to:', currentStep);
+  }, [currentStep]);
+
   const renderCurrentStep = () => {
+    console.log('renderCurrentStep called with step:', currentStep);
     switch (currentStep) {
-      case 1: return renderStep1(); // Transfer details + request security code
-      case 2: return renderStep2(); // Security code input
+      case 1: 
+        console.log('Rendering step 1');
+        return renderStep1(); // Transfer details + request security code
+      case 2: 
+        console.log('Rendering step 2');
+        return renderStep2(); // Security code input
       case 3:
+        console.log('Rendering step 3');
         // Success or failure
         return transferStatus === 'success' ? renderStep5() : renderStep6();
-      default: return renderStep1();
+      default: 
+        console.log('Rendering default step 1');
+        return renderStep1();
     }
   };
 
