@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { transferApi, TransferRequest } from '@/lib/api';
 import Link from 'next/link';
 import jsQR from 'jsqr';
+import toast from 'react-hot-toast';
 
 interface TransferData {
   recipient: string;
@@ -267,13 +268,18 @@ export default function TransferPage() {
       if (response.success && response.data) {
         setTransferId(response.data.transferId);
         setSecurityCodeSent(true);
-        // Show success message
-        console.log('Security code sent successfully');
+        // Immediately move to security code page - don't wait for email
+        setCurrentStep(2);
+        console.log('Security code requested successfully, proceeding to input page');
       } else {
-        console.error('Failed to send security code:', response.message);
+        console.error('Failed to request security code:', response.message);
+        // Show error message to user
+        toast.error(`Failed to request security code: ${response.message}`);
       }
     } catch (error) {
       console.error('Error requesting security code:', error);
+      // Show error message to user
+      toast.error('Failed to request security code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -454,20 +460,13 @@ export default function TransferPage() {
         ) : (
           <div className="space-y-3">
             <div className="p-3 text-center">
-              <p className="text-sm ">
-                ✅ Security code sent to your email
+              <p className="text-sm text-green-600">
+                ✅ Security code requested successfully
               </p>
-              <p className="text-xs ">
-                Check your email and click continue to enter the code
+              <p className="text-xs text-muted-foreground mt-1">
+                Redirecting to security code page...
               </p>
             </div>
-
-            <Button
-              onClick={() => setCurrentStep(2)}
-              className="w-full h-10 md:h-11 text-sm md:text-base bg-green-600 hover:bg-green-700"
-            >
-              Continue
-            </Button>
           </div>
         )}
       </div>
@@ -495,7 +494,7 @@ export default function TransferPage() {
             </div>
             <p className="text-blue-600 text-lg md:text-xl">Enter Security Code</p>
             <p className="text-sm md:text-base text-muted-foreground mb-4">
-              We've sent a 6-digit security code to your email address. Please enter it below to complete your transfer.
+              We're sending a 6-digit security code to your email address. You can enter it below as soon as you receive it.
             </p>
           </div>
 
