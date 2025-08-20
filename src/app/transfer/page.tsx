@@ -447,7 +447,7 @@ export default function TransferPage() {
               isLoading ||
               !!validateRecipient()
             }
-            className="w-full h-10 md:h-11 text-sm md:text-base bg-blue-600 hover:bg-blue-700"
+            className="w-full h-10 md:h-11 text-sm md:text-base bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isLoading ? 'Sending...' : 'Request Security Code'}
           </Button>
