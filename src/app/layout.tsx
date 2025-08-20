@@ -71,6 +71,21 @@ export default function RootLayout({
           <TokenBalanceProvider>
             <GlobalPullToRefresh>
               <div className="min-h-screen flex flex-col">
+                {/* Development Banner */}
+                <div className="bg-blue-500 border-b border-gray-800 text-white px-4 py-2 text-center font-medium shadow-lg">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-pulse">
+                      🚧
+                    </div>
+                    <span className="text-sm md:text-base">
+                      We're under development. App may crash, we'll fix it soon.
+                    </span>
+                    <div className="animate-pulse">
+                      🚧
+                    </div>
+                  </div>
+                </div>
+                
                 <NavbarWrapper />
                 <main className="flex-1 mobile-safe-bottom md:pb-0">
                   {children}

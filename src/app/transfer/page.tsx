@@ -3,21 +3,17 @@
 import { useState, useEffect, useRef } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Wallet, User, Mail, Hash, Scan, SearchIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTokenBalance } from '@/contexts/TokenBalanceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { transferApi, TransferRequest } from '@/lib/api';
-import Link from 'next/link';
 import jsQR from 'jsqr';
 import toast from 'react-hot-toast';
-
 interface TransferData {
   recipient: string;
   recipientType: 'internal' | 'external';
@@ -26,8 +22,6 @@ interface TransferData {
   memo: string;
   securityCode: string;
 }
-
-
 
 export default function TransferPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -66,12 +60,17 @@ export default function TransferPage() {
     blockchain: token.blockchain
   }));
 
-
-
   // Refresh balances when component mounts
   useEffect(() => {
     refreshBalances();
   }, [refreshBalances]);
+
+  // Auto-request security code when step 2 is reached
+  useEffect(() => {
+    if (currentStep === 2 && !securityCodeSent) {
+      requestSecurityCode();
+    }
+  }, [currentStep, securityCodeSent]);
 
   const handleBack = () => {
     // Allow going back from step 3 to step 2, and from step 2 to step 1
@@ -81,8 +80,6 @@ export default function TransferPage() {
       setCurrentStep(1);
     }
   };
-
-
 
   const handleTokenSelect = (index: number) => {
     setSelectedTokenIndex(index);
@@ -132,12 +129,6 @@ export default function TransferPage() {
     }
 
     return null;
-  };
-
-  const handleSecurityCodeChange = (value: string) => {
-    // Only allow 6 digits
-    const numericValue = value.replace(/\D/g, '').slice(0, 6);
-    setTransferData(prev => ({ ...prev, securityCode: numericValue }));
   };
 
   const handleQRScan = () => {
@@ -256,18 +247,40 @@ export default function TransferPage() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const requestData = {
-        recipient: transferData.recipient,
-        recipientType: transferData.recipientType,
-        amount: parseFloat(transferData.amount),
-        token: transferData.token,
-        memo: transferData.memo,
-        senderId: currentUser.uid // Add senderId to the request
-      };
+          console.log('Selected token:', availableTokens[selectedTokenIndex]);
+      console.log('Token blockchain:', availableTokens[selectedTokenIndex]?.blockchain);
 
-      console.log('Requesting security code with data:', requestData);
+      setIsLoading(true);
+      try {
+        // Map frontend blockchain names to Circle API blockchain identifiers
+        const getCircleBlockchain = (blockchain: string) => {
+          const blockchainMap: { [key: string]: string } = {
+            'ethereum': 'ETH-SEPOLIA',
+            'polygon': 'MATIC-AMOY',
+            'arbitrum': 'ARB-SEPOLIA',
+            'base': 'BASE',
+            'optimism': 'OP',
+            'avalanche': 'AVAX',
+            'solana': 'SOL',
+            'uniswap': 'UNI'
+          };
+          const mappedBlockchain = blockchainMap[blockchain] || 'ETH';
+          console.log(`Mapping blockchain: ${blockchain} → ${mappedBlockchain}`);
+          return mappedBlockchain;
+        };
+
+              const requestData = {
+          recipient: transferData.recipient,
+          recipientType: transferData.recipientType,
+          amount: parseFloat(transferData.amount),
+          token: transferData.token,
+          memo: transferData.memo,
+          blockchain: getCircleBlockchain(availableTokens[selectedTokenIndex]?.blockchain || 'ethereum'),
+          senderId: currentUser.uid // Add senderId to the request
+        };
+
+        console.log('Requesting security code with data:', requestData);
+        console.log('Final blockchain value:', requestData.blockchain);
 
       const response = await transferApi.requestSecurityCode(requestData);
 
@@ -275,25 +288,13 @@ export default function TransferPage() {
       console.log('Response success:', response.success);
       console.log('Response data:', response.data);
 
+
       if (response.success && response.data) {
         setTransferId(response.data.transferId);
         setSecurityCodeSent(true);
-        
+
         console.log('Security code requested successfully, moving to step 2');
-        console.log('Current step before change:', currentStep);
-        
-        // Immediately move to security code page - don't wait for email
         setCurrentStep(2);
-        
-        console.log('Step change initiated. New step should be 2');
-        
-        // Fallback: force step change after a short delay if needed
-        setTimeout(() => {
-          if (currentStep !== 2) {
-            console.log('Step change failed, forcing to step 2');
-            setCurrentStep(2);
-          }
-        }, 100);
       } else {
         console.error('Failed to request security code:', response.message);
         // Show error message to user
@@ -329,9 +330,9 @@ export default function TransferPage() {
               onClick={() => {
                 // Clear recipient if switching to internal and current recipient is a wallet address
                 if (transferData.recipientType === 'external' && transferData.recipient) {
-                  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/.test(transferData.recipient) || 
-                                        /^[a-zA-Z0-9]{26,35}$/.test(transferData.recipient) || 
-                                        /^[a-zA-Z0-9]{32,44}$/.test(transferData.recipient);
+                  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/.test(transferData.recipient) ||
+                    /^[a-zA-Z0-9]{26,35}$/.test(transferData.recipient) ||
+                    /^[a-zA-Z0-9]{32,44}$/.test(transferData.recipient);
                   if (!isWalletAddress) {
                     setTransferData(prev => ({ ...prev, recipient: '' }));
                   }
@@ -349,9 +350,9 @@ export default function TransferPage() {
               onClick={() => {
                 // Clear recipient if switching to external and current recipient is not a wallet address
                 if (transferData.recipientType === 'internal' && transferData.recipient) {
-                  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/.test(transferData.recipient) || 
-                                        /^[a-zA-Z0-9]{26,35}$/.test(transferData.recipient) || 
-                                        /^[a-zA-Z0-9]{32,44}$/.test(transferData.recipient);
+                  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/.test(transferData.recipient) ||
+                    /^[a-zA-Z0-9]{26,35}$/.test(transferData.recipient) ||
+                    /^[a-zA-Z0-9]{32,44}$/.test(transferData.recipient);
                   if (!isWalletAddress) {
                     setTransferData(prev => ({ ...prev, recipient: '' }));
                     toast.success('Recipient cleared - external wallets only accept wallet addresses');
@@ -498,7 +499,7 @@ export default function TransferPage() {
 
         {!securityCodeSent ? (
           <Button
-            onClick={requestSecurityCode}
+            onClick={() => setCurrentStep(2)}
             disabled={
               !transferData.recipient ||
               selectedTokenIndex === -1 ||
@@ -526,8 +527,6 @@ export default function TransferPage() {
       </div>
     </div>
   );
-
-
 
   const renderStep2 = () => {
     const selectedToken = availableTokens.find(t => t.symbol === transferData.token);
@@ -689,8 +688,8 @@ export default function TransferPage() {
         </p>
         <div className="mb-4">
           <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${transferData.recipientType === 'internal'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-orange-100 text-orange-700'
+            ? 'bg-blue-100 text-blue-700'
+            : 'bg-orange-100 text-orange-700'
             }`}>
             {transferData.recipientType === 'internal' ? (
               <>
@@ -750,17 +749,17 @@ export default function TransferPage() {
   const renderCurrentStep = () => {
     console.log('renderCurrentStep called with step:', currentStep);
     switch (currentStep) {
-      case 1: 
+      case 1:
         console.log('Rendering step 1');
         return renderStep1(); // Transfer details + request security code
-      case 2: 
+      case 2:
         console.log('Rendering step 2');
         return renderStep2(); // Security code input
       case 3:
         console.log('Rendering step 3');
         // Success or failure
         return transferStatus === 'success' ? renderStep5() : renderStep6();
-      default: 
+      default:
         console.log('Rendering default step 1');
         return renderStep1();
     }
