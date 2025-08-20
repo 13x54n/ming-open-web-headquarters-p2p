@@ -8,11 +8,23 @@ export interface ApiResponse<T = any> {
 }
 
 export interface TransferRequest {
+  senderId: string;
   recipient: string;
+  recipientType: 'internal' | 'external';
   amount: number;
   token: string;
   memo?: string;
   securityCode: string;
+  transferId: string;
+}
+
+export interface SecurityCodeRequest {
+  senderId: string;
+  recipient: string;
+  recipientType: 'internal' | 'external';
+  amount: number;
+  token: string;
+  memo?: string;
 }
 
 export interface TransferResponse {
@@ -71,6 +83,14 @@ async function apiRequest<T>(
 
 // Transfer API functions
 export const transferApi = {
+  // Request security code for transfer
+  requestSecurityCode: async (requestData: SecurityCodeRequest): Promise<ApiResponse<{ transferId: string; expiresIn: string; cooldownUntil: string }>> => {
+    return apiRequest<{ transferId: string; expiresIn: string; cooldownUntil: string }>('/transfers/request-code', {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  },
+
   // Create a new transfer
   createTransfer: async (transferData: TransferRequest): Promise<ApiResponse<TransferResponse>> => {
     return apiRequest<TransferResponse>('/transfers', {
@@ -80,18 +100,18 @@ export const transferApi = {
   },
 
   // Get user's transfer history
-  getUserTransfers: async (page: number = 1, limit: number = 20): Promise<ApiResponse<TransferResponse[]>> => {
-    return apiRequest<TransferResponse[]>(`/transfers?page=${page}&limit=${limit}`);
+  getUserTransfers: async (userId: string, page: number = 1, limit: number = 20): Promise<ApiResponse<TransferResponse[]>> => {
+    return apiRequest<TransferResponse[]>(`/transfers?userId=${userId}&page=${page}&limit=${limit}`);
   },
 
   // Get specific transfer details
-  getTransferById: async (id: string): Promise<ApiResponse<TransferResponse>> => {
-    return apiRequest<TransferResponse>(`/transfers/${id}`);
+  getTransferById: async (id: string, userId: string): Promise<ApiResponse<TransferResponse>> => {
+    return apiRequest<TransferResponse>(`/transfers/${id}?userId=${userId}`);
   },
 
   // Get transfer status
-  getTransferStatus: async (id: string): Promise<ApiResponse<{ status: string }>> => {
-    return apiRequest<{ status: string }>(`/transfers/status/${id}`);
+  getTransferStatus: async (id: string, userId: string): Promise<ApiResponse<{ status: string }>> => {
+    return apiRequest<{ status: string }>(`/transfers/status/${id}?userId=${userId}`);
   },
 };
 

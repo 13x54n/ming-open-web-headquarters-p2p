@@ -12,13 +12,14 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Wallet, User, Mail, Hash, Scan, SearchIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTokenBalance } from '@/contexts/TokenBalanceContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { transferApi, TransferRequest } from '@/lib/api';
 import Link from 'next/link';
 import jsQR from 'jsqr';
 
 interface TransferData {
   recipient: string;
-  recipientType: 'email' | 'uid' | 'wallet' | 'contact';
+  recipientType: 'internal' | 'external';
   amount: string;
   token: string;
   memo: string;
@@ -31,12 +32,14 @@ export default function TransferPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [transferData, setTransferData] = useState<TransferData>({
     recipient: '',
-    recipientType: 'email',
+    recipientType: 'internal',
     amount: '',
     token: '',
     memo: '',
     securityCode: ''
   });
+  const [transferId, setTransferId] = useState<string>('');
+  const [securityCodeSent, setSecurityCodeSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [transferStatus, setTransferStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [selectedTokenIndex, setSelectedTokenIndex] = useState<number>(-1);
@@ -45,9 +48,11 @@ export default function TransferPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const securityCodeRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const router = useRouter();
   const { tokenBalances, isLoading: balancesLoading, refreshBalances } = useTokenBalance();
+  const { currentUser } = useAuth();
 
   // Get available tokens from TokenBalanceContext
   const availableTokens = tokenBalances.map((token, index) => ({
@@ -67,15 +72,12 @@ export default function TransferPage() {
     refreshBalances();
   }, [refreshBalances]);
 
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    // Allow going back from step 3 to step 2, and from step 2 to step 1
+    if (currentStep === 3) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(1);
     }
   };
 
@@ -91,6 +93,40 @@ export default function TransferPage() {
       const selectedToken = availableTokens[selectedTokenIndex];
       setTransferData(prev => ({ ...prev, amount: selectedToken.balance }));
     }
+  };
+
+  const validateRecipient = () => {
+    const { recipient, recipientType } = transferData;
+
+    if (!recipient.trim()) {
+      return 'Recipient is required';
+    }
+
+    if (recipientType === 'internal') {
+      // For internal users, accept email, UID, or wallet address
+      const isValidInternal =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) || // Email format
+        /^[a-zA-Z0-9_-]{3,}$/.test(recipient) || // UID format
+        /^0x[a-fA-F0-9]{40}$/.test(recipient) || // Ethereum wallet address
+        /^[a-zA-Z0-9]{26,35}$/.test(recipient) || // Bitcoin-style addresses
+        /^[a-zA-Z0-9]{32,44}$/.test(recipient); // Other crypto addresses
+
+      if (!isValidInternal) {
+        return 'Invalid format for internal user. Use email, UID, or wallet address.';
+      }
+    } else {
+      // For external wallets, only accept valid wallet addresses
+      const isValidExternal =
+        /^0x[a-fA-F0-9]{40}$/.test(recipient) || // Ethereum wallet address
+        /^[a-zA-Z0-9]{26,35}$/.test(recipient) || // Bitcoin-style addresses
+        /^[a-zA-Z0-9]{32,44}$/.test(recipient); // Other crypto addresses
+
+      if (!isValidExternal) {
+        return 'Invalid wallet address format for external transfer.';
+      }
+    }
+
+    return null;
   };
 
   const handleSecurityCodeChange = (value: string) => {
@@ -114,10 +150,6 @@ export default function TransferPage() {
     } catch (error) {
       setScanningError('Invalid QR code format');
     }
-  };
-
-  const handleQRScanError = (error: string) => {
-    setScanningError(error);
   };
 
   const closeQRScanner = () => {
@@ -203,35 +235,45 @@ export default function TransferPage() {
     return () => clearInterval(interval);
   }, [showQRScanner]);
 
-  const handleTransfer = async () => {
+  const requestSecurityCode = async () => {
+    if (!currentUser?.uid) {
+      console.error('User not logged in');
+      return;
+    }
+
+    const validationError = validateRecipient();
+    if (validationError) {
+      console.error('Validation error:', validationError);
+      return;
+    }
+
+    if (!transferData.amount || !transferData.token) {
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Prepare transfer data for API
-      const transferRequest: TransferRequest = {
+      const requestData = {
         recipient: transferData.recipient,
+        recipientType: transferData.recipientType,
         amount: parseFloat(transferData.amount),
         token: transferData.token,
         memo: transferData.memo,
-        securityCode: transferData.securityCode
+        senderId: currentUser.uid // Add senderId to the request
       };
 
-      // Call the backend API
-      const response = await transferApi.createTransfer(transferRequest);
+      const response = await transferApi.requestSecurityCode(requestData);
 
       if (response.success && response.data) {
-        setTransferStatus('success');
-        // Refresh balances after successful transfer
-        refreshBalances();
+        setTransferId(response.data.transferId);
+        setSecurityCodeSent(true);
+        // Show success message
+        console.log('Security code sent successfully');
       } else {
-        setTransferStatus('failed');
-        console.error('Transfer failed:', response.message);
+        console.error('Failed to send security code:', response.message);
       }
-
-      handleNext();
     } catch (error) {
-      console.error('Transfer error:', error);
-      setTransferStatus('failed');
-      handleNext();
+      console.error('Error requesting security code:', error);
     } finally {
       setIsLoading(false);
     }
@@ -249,9 +291,36 @@ export default function TransferPage() {
         {/* Recipient Section */}
         <div className="space-y-3">
           <Label className="text-lg font-medium">Send crypto to</Label>
+
+          {/* Transfer Type Toggle */}
+          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+            <Button
+              variant={transferData.recipientType === 'internal' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setTransferData(prev => ({ ...prev, recipientType: 'internal' }))}
+              className="flex-1"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Internal User
+            </Button>
+            <Button
+              variant={transferData.recipientType === 'external' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setTransferData(prev => ({ ...prev, recipientType: 'external' }))}
+              className="flex-1"
+            >
+              <Wallet className="w-4 h-4 mr-2" />
+              External Wallet
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2 border border-accent rounded-md p-1 px-3">
             <input
-              placeholder="Email, address, uid of recipient..."
+              placeholder={
+                transferData.recipientType === 'internal'
+                  ? "Email, UID, or wallet address"
+                  : "External wallet address (0x...)"
+              }
               value={transferData.recipient}
               onChange={(e) => setTransferData(prev => ({ ...prev, recipient: e.target.value }))}
               className="flex-1 border-0 bg-transparent p-0 h-10 md:h-11 focus:border-0 focus:outline-0 text-sm md:text-base"
@@ -265,7 +334,28 @@ export default function TransferPage() {
             </Button>
           </div>
 
+          {/* Validation Error */}
+          {transferData.recipient && validateRecipient() && (
+            <div className="text-sm text-red-600 flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              {validateRecipient()}
+            </div>
+          )}
 
+          {/* Transfer Type Info */}
+          <div className="text-sm text-muted-foreground">
+            {transferData.recipientType === 'internal' ? (
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span>Send to registered users by email, UID, or wallet address</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4" />
+                <span>Send to external wallet addresses (may incur network fees)</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Token Selection Section */}
@@ -328,7 +418,7 @@ export default function TransferPage() {
                   Max
                 </Button>
               </div>
-              <p className="text-sm md:text-base text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Available: {availableTokens.find(t => t.symbol === transferData.token)?.balance || '0'} {transferData.token}
               </p>
             </div>
@@ -346,13 +436,40 @@ export default function TransferPage() {
           </div>
         )}
 
-        <Button
-          onClick={handleNext}
-          disabled={!transferData.recipient || selectedTokenIndex === -1 || !transferData.amount || parseFloat(transferData.amount) <= 0}
-          className="w-full h-10 md:h-11 text-sm md:text-base"
-        >
-          Next <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
+        {!securityCodeSent ? (
+          <Button
+            onClick={requestSecurityCode}
+            disabled={
+              !transferData.recipient ||
+              selectedTokenIndex === -1 ||
+              !transferData.amount ||
+              parseFloat(transferData.amount) <= 0 ||
+              isLoading ||
+              !!validateRecipient()
+            }
+            className="w-full h-10 md:h-11 text-sm md:text-base bg-blue-600 hover:bg-blue-700"
+          >
+            {isLoading ? 'Sending...' : 'Request Security Code'}
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            <div className="p-3 text-center">
+              <p className="text-sm ">
+                ✅ Security code sent to your email
+              </p>
+              <p className="text-xs ">
+                Check your email and click continue to enter the code
+              </p>
+            </div>
+
+            <Button
+              onClick={() => setCurrentStep(2)}
+              className="w-full h-10 md:h-11 text-sm md:text-base bg-green-600 hover:bg-green-700"
+            >
+              Continue
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -364,104 +481,148 @@ export default function TransferPage() {
     const amountValue = parseFloat(transferData.amount) * (selectedToken?.price || 0);
 
     return (
-      <div className="w-full bg-transparent mx-auto mx-4 md:mx-auto">
-        <div className="px-4 md:px-6 ">
-          <p className="text-xl font-medium">Transfer Summary</p>
-          <p className="text-base text-muted-foreground">Review your transfer details before confirming</p>
-        </div>
-        <div className="space-y-4 mt-8 px-4 md:px-6 pb-4 md:pb-6">
-          <div className="space-y-3">
-            <div className="flex justify-between items-start">
-              <span className="text-sm md:text-base text-muted-foreground">Recipient:</span>
-              <span className="font-medium text-sm md:text-base text-right max-w-[60%] break-words">{transferData.recipient}</span>
-            </div>
-            <div className="flex justify-between items-start">
-              <span className="text-sm md:text-base text-muted-foreground">Token:</span>
-              <span className="font-medium text-sm md:text-base">{transferData.amount} {transferData.token}</span>
-            </div>
-            {transferData.memo && (
-              <div className="flex justify-between items-start">
-                <span className="text-sm md:text-base text-muted-foreground">Memo:</span>
-                <span className="font-medium text-sm md:text-base text-right max-w-[60%] break-words">{transferData.memo}</span>
-              </div>
-            )}
+      <div className="w-full mx-auto mx-4 md:mx-auto">
+        <div className="space-y-6">
+          {/* Back button */}
+          <div className="p-0 h-10 md:h-11 cursor-pointer flex items-center gap-2" onClick={() => setCurrentStep(1)}>
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </div>
 
-          <div className="flex justify-between items-center">
-            <p className="text-sm md:text-base text-muted-foreground">Total</p>
-            <p className="text-sm md:text-base font-medium">${amountValue.toFixed(2)}</p>
+          <div className="text-center px-4 md:px-6 py-4 md:px-6">
+            <div className="mx-auto w-12 h-12 md:w-16 md:h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <Mail className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+            </div>
+            <p className="text-blue-600 text-lg md:text-xl">Enter Security Code</p>
+            <p className="text-sm md:text-base text-muted-foreground mb-4">
+              We've sent a 6-digit security code to your email address. Please enter it below to complete your transfer.
+            </p>
           </div>
 
-          <Separator />
-
-          <div className="space-y-3 mt-4">
-            <p className="text-base font-medium text-foreground">Security Code</p>
-            <div className="flex gap-2 justify-center mb-4">
-              {[0, 1, 2, 3, 4, 5].map((index) => (
-                <div
-                  key={index}
-                  className="w-12 h-12 md:w-14 md:h-14 border-2 border-accent rounded-lg flex items-center justify-center bg-background"
-                >
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={1}
-                    value={transferData.securityCode[index] || ''}
-                    onChange={(e) => {
-                      const newValue = e.target.value;
-                      if (newValue && /^\d$/.test(newValue)) {
-                        const newCode = transferData.securityCode.split('');
-                        newCode[index] = newValue;
-                        handleSecurityCodeChange(newCode.join(''));
-
-                        // Auto-focus next input
-                        if (index < 5) {
-                          const nextInput = (e.target as HTMLInputElement).parentElement?.nextElementSibling?.querySelector('input');
-                          if (nextInput) nextInput.focus();
-                        }
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace') {
-                        if (transferData.securityCode[index]) {
-                          // If current input has a value, clear it first
-                          const newCode = transferData.securityCode.split('');
-                          newCode[index] = '';
-                          handleSecurityCodeChange(newCode.join(''));
-                        } else if (index > 0) {
-                          // If current input is empty and not first, move to previous
-                          const prevInput = (e.target as HTMLInputElement).parentElement?.previousElementSibling?.querySelector('input');
-                          if (prevInput) prevInput.focus();
-                        }
-                      }
-                    }}
-                    className="w-full h-full text-center text-lg md:text-xl font-bold border-0 bg-transparent focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-moz-appearance]:textfield"
-                    placeholder="0"
-                  />
+          {/* Transfer Summary */}
+          <div className="bg-muted/20 rounded-lg p-4 space-y-3">
+            <h3 className="font-medium text-sm">Transfer Summary</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Transfer Type:</span>
+                <div className="flex items-center gap-2">
+                  {transferData.recipientType === 'internal' ? (
+                    <>
+                      <User className="w-3 h-3 text-blue-600" />
+                      <span className="text-blue-600">Internal User</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-3 h-3 text-orange-600" />
+                      <span className="text-orange-600">External Wallet</span>
+                    </>
+                  )}
                 </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Recipient:</span>
+                <span className="font-medium max-w-[60%] break-words">{transferData.recipient}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount:</span>
+                <span className="font-medium">{transferData.amount} {transferData.token}</span>
+              </div>
+              {transferData.memo && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Memo:</span>
+                  <span className="font-medium max-w-[60%] break-words">{transferData.memo}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 border-t">
+                <span className="text-muted-foreground">Total Value:</span>
+                <span className="font-medium">${amountValue.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm md:text-base">Security Code</Label>
+            <div className="flex gap-2 justify-center">
+              {[0, 1, 2, 3, 4, 5].map((index) => (
+                <input
+                  key={index}
+                  type="text"
+                  maxLength={1}
+                  value={transferData.securityCode[index] || ''}
+                  onClick={(e) => {
+                    // Select all text when input is clicked
+                    (e.target as HTMLInputElement).select();
+                  }}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value && /^\d$/.test(value)) {
+                      const newCode = transferData.securityCode.split('');
+                      newCode[index] = value;
+                      setTransferData(prev => ({ ...prev, securityCode: newCode.join('') }));
+
+                      // Auto-focus to next input
+                      if (index < 5 && securityCodeRefs.current[index + 1]) {
+                        securityCodeRefs.current[index + 1]?.focus();
+                      }
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text');
+                    const numbers = pastedData.replace(/\D/g, '').slice(0, 6);
+
+                    if (numbers.length > 0) {
+                      const newCode = transferData.securityCode.split('');
+                      for (let i = 0; i < numbers.length && (index + i) < 6; i++) {
+                        newCode[index + i] = numbers[i];
+                      }
+                      setTransferData(prev => ({ ...prev, securityCode: newCode.join('') }));
+
+                      // Focus the next empty input or the last input
+                      const nextIndex = Math.min(index + numbers.length, 5);
+                      if (securityCodeRefs.current[nextIndex]) {
+                        securityCodeRefs.current[nextIndex]?.focus();
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace') {
+                      if (!transferData.securityCode[index] && index > 0) {
+                        // Move to previous input on backspace if current is empty
+                        const prevInput = securityCodeRefs.current[index - 1];
+                        if (prevInput) {
+                          prevInput.focus();
+                          prevInput.select();
+                        }
+                      } else if (transferData.securityCode[index]) {
+                        // Clear current input and stay focused
+                        const newCode = transferData.securityCode.split('');
+                        newCode[index] = '';
+                        setTransferData(prev => ({ ...prev, securityCode: newCode.join('') }));
+                      }
+                    }
+                  }}
+                  ref={(el) => {
+                    securityCodeRefs.current[index] = el;
+                  }}
+                  className="w-12 h-12 text-center text-lg border-2 border-accent rounded-md focus:border-green-400 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-moz-appearance]:textfield"
+                />
               ))}
             </div>
-            <p className="text-xs text-muted-foreground text-center">Security code is sent to your email.</p>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleBack} className="flex-1 h-10 md:h-11 text-sm md:text-base">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <Button
-              onClick={handleTransfer}
-              disabled={isLoading || transferData.securityCode.length !== 6}
-              className="flex-1 h-10 md:h-11 text-sm md:text-base bg-green-400 hover:bg-green-500 cursor-pointer"
-            >
-              {isLoading ? 'Processing...' : 'Confirm Transfer'}
-            </Button>
-          </div>
+          <Button
+            onClick={handleTransfer}
+            disabled={transferData.securityCode.length !== 6 || isLoading}
+            className="w-full h-10 md:h-11 text-sm md:text-base bg-green-600 hover:bg-green-700"
+          >
+            {isLoading ? 'Processing...' : 'Confirm Transfer'}
+          </Button>
         </div>
       </div>
     );
   };
+
 
   const renderStep5 = () => (
     <div className="w-full mx-auto mx-4 md:mx-auto">
@@ -473,6 +634,24 @@ export default function TransferPage() {
         <p className="text-sm md:text-base text-muted-foreground mb-4 break-words mb-4">
           {transferData.amount} {transferData.token} has been sent to {transferData.recipient}
         </p>
+        <div className="mb-4">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${transferData.recipientType === 'internal'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-orange-100 text-orange-700'
+            }`}>
+            {transferData.recipientType === 'internal' ? (
+              <>
+                <User className="w-3 h-3" />
+                Internal Transfer
+              </>
+            ) : (
+              <>
+                <Wallet className="w-3 h-3" />
+                External Wallet
+              </>
+            )}
+          </div>
+        </div>
         <div>
           <div onClick={() => router.push('/wallet')} className="cursor-pointer w-full h-10 md:h-11 text-sm md:text-base bg-accent text-accent-foreground p-3  rounded-md">
             Return to wallet
@@ -509,12 +688,63 @@ export default function TransferPage() {
 
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 1: return renderStep1();
-      case 2: return renderStep2(); // Transfer summary with security code
+      case 1: return renderStep1(); // Transfer details + request security code
+      case 2: return renderStep2(); // Security code input
       case 3:
         // Success or failure
         return transferStatus === 'success' ? renderStep5() : renderStep6();
       default: return renderStep1();
+    }
+  };
+
+  // Simplified step progression - go directly from step 1 to step 3
+  const handleTransfer = async () => {
+    if (!currentUser?.uid) {
+      console.error('User not logged in');
+      return;
+    }
+
+    if (!transferId || !transferData.securityCode) {
+      console.error('Missing transfer ID or security code');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Prepare transfer data for API
+      const transferRequest: TransferRequest = {
+        recipient: transferData.recipient,
+        recipientType: transferData.recipientType,
+        amount: parseFloat(transferData.amount),
+        token: transferData.token,
+        memo: transferData.memo,
+        securityCode: transferData.securityCode,
+        transferId: transferId,
+        senderId: currentUser.uid // Add senderId to the request
+      };
+
+      // Call the backend API
+      const response = await transferApi.createTransfer(transferRequest);
+
+      if (response.success && response.data) {
+        setTransferStatus('success');
+        // Refresh balances after successful transfer
+        refreshBalances();
+        // Go directly to step 3 (success/failure)
+        setCurrentStep(3);
+      } else {
+        setTransferStatus('failed');
+        console.error('Transfer failed:', response.message);
+        // Go directly to step 3 (success/failure)
+        setCurrentStep(3);
+      }
+    } catch (error) {
+      console.error('Transfer error:', error);
+      setTransferStatus('failed');
+      // Go directly to step 3 (success/failure)
+      setCurrentStep(3);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -593,7 +823,7 @@ export default function TransferPage() {
   return (
     <ProtectedRoute>
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
-                {renderCurrentStep()}
+        {renderCurrentStep()}
         {renderQRScanner()}
       </div>
     </ProtectedRoute>
